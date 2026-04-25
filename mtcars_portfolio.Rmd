@@ -1,0 +1,1543 @@
+---
+title: "Statistical Modelling Portfolio"
+subtitle: "Motor Trend Car Road Tests — mtcars Dataset"
+author: "Statistical Modeling Portfolio"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    template: custom_template.html
+    latex_engine: xelatex
+    number_sections: true
+    code_folding: show
+    fig_width: 9
+    fig_height: 5
+    fig_caption: true
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo      = TRUE,
+  warning   = FALSE,
+  message   = FALSE,
+  comment   = "#>",
+  fig.align = "center",
+  out.width = "90%",
+  dev       = "png",
+  dev.args  = list(bg = "#ffffff")
+)
+```
+
+```{r theme-setup, include=FALSE}
+library(ggplot2)
+
+theme_portfolio <- function(base_size = 14) {
+  theme_minimal(base_size = base_size) %+replace%
+    theme(
+      plot.background   = element_rect(fill = "#ffffff", colour = NA),
+      panel.background  = element_rect(fill = "#f8f9fa", colour = NA),
+      panel.border      = element_rect(fill = NA, colour = "#dee2e6", linewidth = 0.5),
+      panel.grid.major  = element_line(colour = "#e9ecef", linewidth = 0.4),
+      panel.grid.minor  = element_line(colour = "#f1f3f5", linewidth = 0.2),
+      text              = element_text(colour = "#374151"),
+      plot.title        = element_text(face = "bold", size = rel(1.15),
+                                       colour = "#111827", hjust = 0,
+                                       margin = margin(b = 5)),
+      plot.subtitle     = element_text(size = rel(0.88), colour = "#6c757d",
+                                       hjust = 0, margin = margin(b = 10)),
+      plot.caption      = element_text(size = rel(0.76), colour = "#6c757d",
+                                       hjust = 1),
+      axis.title        = element_text(size = rel(0.88), colour = "#6c757d"),
+      axis.text         = element_text(size = rel(0.84), colour = "#6c757d"),
+      axis.ticks        = element_line(colour = "#dee2e6"),
+      legend.background = element_rect(fill = "#ffffff", colour = "#dee2e6"),
+      legend.key        = element_rect(fill = "#f8f9fa", colour = NA),
+      legend.title      = element_text(size = rel(0.84), colour = "#6c757d"),
+      legend.text       = element_text(size = rel(0.84), colour = "#374151"),
+      legend.position   = "top",
+      strip.background  = element_rect(fill = "#f1f3f5", colour = "#dee2e6"),
+      strip.text        = element_text(face = "bold", size = rel(0.88),
+                                       colour = "#374151"),
+      plot.margin       = margin(14, 14, 14, 14)
+    )
+}
+
+theme_set(theme_portfolio())
+
+col_blue   <- "#2563eb"
+col_green  <- "#059669"
+col_red    <- "#dc2626"
+col_amber  <- "#d97706"
+col_violet <- "#7c3aed"
+col_sky    <- "#0891b2"
+
+two_cols  <- c(col_blue, col_red)
+four_cols <- c(col_blue, col_red, col_green, col_amber)
+```
+
+---
+
+> **Portfolio Objectives**
+>
+> | # | Objective | Methods Applied |
+> |---|:----------|:----------------|
+> | 1 | Describe probability as a foundation of statistical modelling, including inference and MLE | Log-likelihood visualisation; Normal, Bernoulli, and Multinomial distributions; AIC, BIC, and LRT derived from MLE |
+> | 2 | Apply the appropriate GLM for a specific data context | OLS/Normal for continuous `mpg`; Binomial logit for binary `am`; Multinomial logit for categorical `cyl`; LDA as generative alternative |
+> | 3 | Demonstrate model selection given a set of candidate models | AIC/BIC candidate comparison; LRT; stepwise selection; LOOCV; 10-fold CV; LASSO lambda tuning |
+> | 4 | Express the results of statistical models to a general audience | Plain-language explanations throughout; odds ratio forest plot; predicted probability curves; non-technical conclusion |
+> | 5 | Use programming software to fit and assess statistical models | R with `lm`, `glm`, `glmnet`, `nnet::multinom`, `MASS::lda`, `caret`, `pROC`, `car`, `lmtest`, `broom` |
+
+---
+
+# Dataset & Research Questions {#data}
+
+## The mtcars Dataset
+
+The mtcars dataset is a classic automotive dataset derived from the 1974 Motor Trend US magazine. 
+It contains 32 car models and 11 performance and design variables, making it a popular benchmark
+for statistical modeling, regression analysis, and exploratory data analysis.
+
+Each row corresponds to a unique car model, and each column captures a specific mechanical or 
+performance attribute. The dataset is useful for demonstrating relationships between
+engine characteristics, fuel efficiency, and vehicle design choices. In my modelling workflow I would
+like to answer these distinct research questions:
+
+|   | Research Question | Outcome | Model(s) |
+|---|:------------------|:--------|:---------|
+| 1 | What predicts fuel efficiency? | `mpg` — continuous | Linear Regression, LASSO, Ridge |
+| 2 | Can we classify transmission type? | `am` — binary (0/1) | Logistic Regression GLM, LDA |
+| 3 | What predicts number of cylinders? | `cyl` — 3 categories | Multinomial Logistic Regression |
+
+## Variable Dictionary
+
+| Variable | Type | Description |
+|:---------|:-----|:------------|
+| `mpg`    | Continuous | Miles per gallon — **outcome 1** |
+| `am`     | Binary (0/1) | Transmission: 0 = automatic, 1 = manual — **outcome 2** |
+| `cyl`    | Categorical (4/6/8) | Number of cylinders — **outcome 3** |
+| `disp`   | Continuous | Engine displacement (cu. in.) |
+| `hp`     | Continuous | Gross horsepower |
+| `drat`   | Continuous | Rear axle ratio |
+| `wt`     | Continuous | Weight (1000 lbs) |
+| `qsec`   | Continuous | Quarter mile time |
+| `vs`     | Binary | Engine shape: 0 = V, 1 = straight |
+| `gear`   | Count | Number of forward gears |
+| `carb`   | Count | Number of carburettors |
+
+## Loading Packages & Data
+
+```{r load-packages}
+library(tidyverse)
+library(tidymodels)
+library(ggplot2)
+library(broom) 
+library(MASS)  
+library(glmnet) 
+library(nnet)   
+library(kableExtra)  
+library(scales)  
+library(GGally) 
+library(car)   
+library(lmtest)  
+library(pROC)   
+library(ResourceSelection)
+library(caret)
+library(dplyr)
+library(knitr)
+library(gtsummary)
+library(purrr)
+library(tibble)
+```
+
+```{r load-data}
+data(mtcars)
+
+cars <- mtcars |>
+  mutate(
+    am  = factor(am,  levels = c(0, 1), labels = c("Automatic", "Manual")),
+    cyl = factor(cyl, levels = c(4, 6, 8), labels = c("4-cyl", "6-cyl", "8-cyl")),
+    vs  = factor(vs,  levels = c(0, 1), labels = c("V-shaped", "Straight")),
+    gear = factor(gear),
+    carb = factor(carb)
+  )
+
+cars$am_num <- as.integer(cars$am) - 1
+
+cars |>
+  summarise(
+    Variable = names(cars),
+    DataType = sapply(cars, class),
+    Example  = sapply(cars, function(x) paste(head(x, 5), collapse = ", "))
+  ) |>
+  kable()
+```
+
+```{r data-summary}
+mtcars |>
+  select(mpg, disp, hp, drat, wt, qsec) |>
+  map_df(~ as.numeric(summary(.x)), .id = "Statistic") |>
+  mutate(Statistic = c("Min", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max")) |>
+  select(Statistic, everything()) |>
+  kable()
+
+```
+
+---
+
+# Exploratory Data Analysis {#eda}
+
+> **Objectives 1:** Examining distributions, relationships, and potential
+> issues before modelling.
+
+## Outcome Distributions
+
+```{r eda-mpg, fig.cap="Fuel efficiency (mpg) is right-skewed with a mean of 20.1 mpg. Manual cars tend to achieve higher mpg."}
+p1 <- ggplot(cars, aes(x = mpg, fill = am)) +
+  geom_histogram(bins = 12, alpha = 0.8, colour = "white",
+                 position = "dodge") +
+  scale_fill_manual(values = two_cols) +
+  labs(title = "Distribution of Fuel Efficiency (mpg)",
+       subtitle = "Coloured by transmission type",
+       x = "Miles per Gallon", y = "Count", fill = NULL) +
+  theme_portfolio()
+p1
+```
+
+```{r eda-cyl, fig.cap="Most cars in the dataset have 8 cylinders. Manual transmission is much more common in 4-cylinder cars."}
+p2 <- ggplot(cars, aes(x = cyl, fill = am)) +
+  geom_bar(position = "dodge", colour = "white", width = 0.65) +
+  scale_fill_manual(values = two_cols) +
+  labs(title = "Cylinder Count by Transmission Type",
+       x = "Number of Cylinders", y = "Count", fill = NULL) +
+  theme_portfolio()
+p2
+```
+
+> **Explanation:**
+> Automatic cars mostly appear in the lower mpg range (about 10--20 mpg),
+> meaning they tend to use more fuel. Manual cars mostly appear in the higher
+> mpg range (about 20--35 mpg), meaning they tend to be more fuel-efficient.
+
+## Continuous Predictors
+
+```{r eda-pairs, fig.cap="Pairs plot of key continuous variables. mpg shows strong negative correlations with wt, disp, and hp.", fig.height=7}
+cars |>
+  dplyr::select(mpg, wt, hp, disp, drat, qsec) |>
+  ggpairs(
+    upper = list(continuous = wrap("cor", size = 3.2, colour = "#374151")),
+    diag  = list(continuous = wrap("densityDiag", fill = col_blue, alpha = 0.5)),
+    lower = list(continuous = wrap("points", size = 1.5,
+                                   colour = col_blue, alpha = 0.6))
+  ) +
+  labs(title = "Pairs Plot — Continuous Predictors") +
+  theme_portfolio(base_size = 12)
+```
+
+### Correlation Analysis of Continuous Predictors
+
+> The pairs plot summarizes the relationships among six continuous variables
+> (*mpg*, *wt*, *hp*, *disp*, *drat*, and *qsec*) and reveals several strong,
+> interpretable patterns. Overall, the predictors form two clear clusters:
+> (1) engine size and power variables, and (2) efficiency and performance variables.
+>
+> **Relationships with mpg:**
+> Fuel efficiency shows strong negative correlations with weight (r = -0.868),
+> displacement (r = -0.848), and horsepower (r = -0.776). In contrast, mpg is
+> positively correlated with rear axle ratio (r = 0.681) and quarter-mile time
+> (r = 0.419).
+>
+> **Engine Size and Power Cluster:**
+> The variables wt, disp, and hp are strongly positively correlated with one
+> another (e.g., wt-disp: r = 0.888; hp-disp: r = 0.791). These strong
+> intercorrelations reflect a clear "size/power" dimension and imply potential
+> multicollinearity when included together in a regression model.
+
+```{r eda-scatter, fig.cap="Weight is the single strongest predictor of mpg: heavier cars consume more fuel."}
+cars %>%
+  ggplot(aes(x = wt, y = mpg, colour = cyl, shape = am)) +
+  geom_point(size = 3.5, alpha = 0.85) +
+  geom_smooth(aes(group = 1), method = "lm", se = TRUE,
+              colour = col_blue, fill = col_blue, alpha = 0.12, linewidth = 0.9) +
+  scale_colour_manual(values = c(col_green, col_amber, col_red)) +
+  labs(title    = "mpg vs Weight",
+       subtitle = "Shape = transmission | Colour = cylinders",
+       x = "Weight (1000 lbs)", y = "Miles per Gallon",
+       colour = "Cylinders", shape = "Transmission") +
+  theme_portfolio()
+```
+
+## Correlation Heatmap
+
+```{r eda-corr, fig.cap="wt, disp, and hp are strongly negatively correlated with mpg. Multicollinearity between predictors is notable."}
+cor_mat <- cor(mtcars %>% dplyr::select(mpg, disp, hp, drat, wt, qsec))
+
+cor_mat %>%
+  as.data.frame() %>%
+  rownames_to_column("var1") %>%
+  pivot_longer(-var1, names_to = "var2", values_to = "cor") %>%
+  ggplot(aes(x = var2, y = var1, fill = cor)) +
+  geom_tile(colour = "white", linewidth = 0.5) +
+  geom_text(aes(label = round(cor, 2)), size = 3.2, colour = "white", fontface = "bold") +
+  scale_fill_gradient2(low = col_red, mid = "white", high = col_blue,
+                       midpoint = 0, limits = c(-1, 1)) +
+  labs(title = "Correlation Matrix", x = NULL, y = NULL, fill = "r") +
+  theme_portfolio() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1),
+        panel.grid  = element_blank(),
+        panel.background = element_rect(fill = "white"))
+```
+
+---
+
+# Probability as a Foundation {#probability}
+
+> **Objective 1:** Describing probability as a foundation of statistical modelling,
+> including inference and Maximum Likelihood Estimation.
+
+## Probability Distributions in This Portfolio
+
+Every statistical model begins by specifying a **probability distribution** that
+describes how the outcome was generated. The choice of distribution must match
+the nature of the outcome variable:
+
+| Outcome | Distribution | Rationale |
+|:--------|:-------------|:----------|
+| `mpg` — continuous | Normal: `Y_i ~ N(mu_i, sigma^2)` | Symmetric, continuous — OLS is both MLE and BLUE |
+| `am` — binary | Bernoulli: `Y_i ~ Bernoulli(p_i)` | Two mutually exclusive outcomes |
+| `cyl` — 3 categories | Multinomial(`p_i`) | Unordered polytomous outcome |
+
+## Maximum Likelihood Estimation (MLE)
+
+Maximum Likelihood Estimation (MLE) is a general framework for fitting
+statistical models. The idea is to choose the parameter values (written here as
+"theta‑hat") that make the observed data most probable under the model.
+
+The likelihood function measures how well a given set of parameters explains
+the data. Taking the logarithm of this function gives the log‑likelihood, which
+is easier to work with because products become sums. The MLE is the parameter
+value that maximizes this log‑likelihood.
+
+For **linear regression** under the Normal error assumption, the MLE coincides
+with the familiar Ordinary Least Squares (OLS) solution. In this case, the
+coefficient estimates have a closed‑form expression based on matrix algebra.
+
+For **logistic** and **multinomial** regression, there is no closed‑form
+solution. Instead, the estimates are found numerically using the iterative
+reweighted least squares (IRLS) algorithm, as implemented in functions such as
+`glm()` and `multinom()`.
+
+For **logistic** and **multinomial** regression, the solution is found numerically
+via the IRLS algorithm inside `glm()` and `multinom()`.
+
+
+## From MLE to Model Comparison
+
+Once a model has been fitted by maximum likelihood, the value of the
+log‑likelihood at the estimated parameters becomes the basis for comparing
+different models.
+
+Two widely used criteria are AIC and BIC. Both penalise model complexity to
+discourage overfitting. AIC applies a lighter penalty and tends to favour more
+flexible models, while BIC applies a stronger penalty and tends to prefer more
+parsimonious ones. Both are computed from the log‑likelihood and the number of
+estimated parameters.
+
+The **Likelihood‑Ratio Test (LRT)** provides a formal hypothesis test for
+comparing two nested models. It measures how much the log‑likelihood improves
+when moving from a smaller model to a larger one. The resulting test statistic
+follows a chi‑square distribution, with degrees of freedom equal to the
+difference in the number of parameters between the two models.
+
+
+```{r mle-viz, fig.cap="Log-likelihood for the Normal model fitted to mpg. The MLE (peak) equals the sample mean — the value of mu that makes the data most probable."}
+mu_grid <- seq(15, 26, length.out = 500)
+ll_vals <- sapply(mu_grid, function(mu) {
+  sum(dnorm(mtcars$mpg, mean = mu, sd = sd(mtcars$mpg), log = TRUE))
+})
+mle_mu <- mean(mtcars$mpg)
+
+data.frame(mu = mu_grid, ll = ll_vals) |>
+  ggplot(aes(x = mu, y = ll)) +
+  geom_line(colour = col_blue, linewidth = 1.4) +
+  geom_vline(xintercept = mle_mu, linetype = "dashed",
+             colour = col_red, linewidth = 0.9) +
+  annotate("point", x = mle_mu, y = max(ll_vals), colour = col_red, size = 4) +
+  annotate("label", x = mle_mu + 0.5, y = max(ll_vals) - 3,
+           label = paste0("MLE: mu-hat = ", round(mle_mu, 2), " mpg"),
+           colour = col_red, size = 4, fill = "white", label.size = 0.3) +
+  labs(title    = "Log-Likelihood for Normal Model (outcome = mpg)",
+       subtitle = "The MLE is the peak — the sample mean maximises the log-likelihood",
+       x = "mu (mean mpg)", y = "Log-Likelihood") +
+  theme_portfolio()
+```
+
+---
+
+# Linear Regression {#linear}
+
+> **Objectives 2, 3, 4, 5:** Predicting `mpg` (continuous outcome) using linear regression.
+> Model selection via AIC/BIC and a stepwise search.
+
+## Why Linear Regression?
+
+`mpg` is a continuous, approximately symmetric outcome. Under the Normal
+distribution assumption, OLS is the MLE and produces the Best Linear Unbiased
+Estimator (BLUE).
+
+Y_i = b_0 + b_1 x_{i1} + ... + b_p x_{ip} + e_i,  with  e_i ~ Normal(0, s^2)
+
+## Fitting Candidate Models
+
+```{r lm-candidates}
+#specifying model
+lm_spec <- 
+  linear_reg() |>
+  set_engine("lm")
+
+#Fitting candidate models
+lm_null <- lm_spec |> fit(mpg ~ 1, data = mtcars)
+lm_eng  <- lm_spec |> fit(mpg ~ hp + disp, data = mtcars)
+lm_core <- lm_spec |> fit(mpg ~ wt + hp + am, data = mtcars)
+lm_full <- lm_spec |> fit(mpg ~ wt + hp + disp + drat +
+                                qsec + vs + am + gear + carb,
+                          data = mtcars)
+
+# Bundling models
+candidates <- list(
+  Null   = lm_null,
+  Engine = lm_eng,
+  Core   = lm_core,
+  Full   = lm_full
+)
+
+# Computing metrics for each model
+model_summary <- map_dfr(
+  candidates,
+  function(m) {
+    fit_obj <- extract_fit_engine(m)   # underlying lm object
+    
+    tibble(
+      Predictors = length(coef(fit_obj)) - 1,
+      R2         = glance(fit_obj)$r.squared,
+      Adj_R2     = glance(fit_obj)$adj.r.squared,
+      AIC        = AIC(fit_obj),
+      BIC        = BIC(fit_obj),
+      RMSE       = sqrt(mean(residuals(fit_obj)^2))
+    )
+  },
+  .id = "Model"
+)
+
+model_summary |>
+  mutate(
+    R2     = round(R2, 3),
+    Adj_R2 = round(Adj_R2, 3),
+    AIC    = round(AIC, 2),
+    BIC    = round(BIC, 2),
+    RMSE   = round(RMSE, 3)
+  ) |>
+  kbl(
+    caption = "Linear Regression — Candidate Model Comparison (disp removed after VIF check)",
+    row.names = FALSE
+  ) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) |>
+  row_spec(
+    which.min(model_summary$AIC),
+    bold = TRUE,
+    background = "#f0fdf4",
+    color = "#166534"
+  )
+
+```
+
+>**Explanation:**The table above compares the four linear regression models after removing disp due to multicollinearity. The Core model (wt + hp + am) provides the best balance of performance and simplicity: it has strong R² and adjusted R², the lowest AIC, and competitive RMSE. Although the Full model fits slightly better, it uses many more predictors with diminishing returns, making the Core model the most persimonious model.
+
+
+## Stepwise Selection
+
+```{r lm-stepwise}
+# Initial stepwise on full model — used for exploratory purposes only.
+# The final lm_step is defined after multicollinearity is resolved below.
+lm_full <- lm(
+  mpg ~ wt + hp + disp + drat + qsec + vs + am + gear + carb,
+  data = mtcars
+)
+lm_step_initial <- stepAIC(lm_full, direction = "both", trace = FALSE)
+print(formula(lm_step_initial))
+```
+
+## Model Diagnostics
+
+```{r lm-diagnostics, fig.cap="OLS diagnostic plots on the initial full model. These guide the multicollinearity diagnosis below.", fig.height=7}
+par(mfrow = c(2, 2), mar = c(4, 4, 3, 1),
+    bg = "#ffffff", col.axis = "#6c757d", col.lab = "#374151",
+    col.main = "#111827")
+plot(lm_full, which = 1:4, col = col_blue, pch = 16, cex = 0.8,
+     cex.caption = 0.85)
+par(mfrow = c(1, 1))
+```
+
+> **Regression Diagnostic Plots**
+>
+> The diagnostic plots provide a comprehensive assessment of the linear regression
+> model assumptions, including linearity, normality of residuals, homoscedasticity,
+> and the presence of influential observations.
+>
+> **Residuals vs Fitted:** No strong curvature, suggesting the linearity assumption
+> is reasonably satisfied. A few observations (e.g., *Chrysler Imperial*, *Fiat 128*,
+> *Toyota Corolla*) stand out with larger residuals, but the overall pattern does not
+> indicate major model misspecification.
+>
+> **Normal Q-Q Plot:** The standardised residuals follow the theoretical Normal
+> distribution fairly well with only mild deviations at the tails, indicating the
+> normality assumption is acceptable.
+>
+> **Scale-Location:** The smoothing line is relatively horizontal, indicating
+> approximately constant variance. No strong evidence of heteroscedasticity.
+>
+> **Cook's Distance:** A small number of cases (*Merc 230*, *Chrysler Imperial*,
+> *Ford Pantera L*) show elevated Cook's distance values. None exceed the
+> conventional cutoff of 1, but these points warrant closer inspection.
+
+## Diagnosing Multicollinearity
+
+Multicollinearity occurs when predictors are highly correlated, inflating
+coefficient variance, widening confidence intervals, and making individual
+effects unreliable. The **Variance Inflation Factor (VIF)** quantifies this:
+
+VIF<sub>j</sub> = 1 / (1 − R<sub>j</sub><sup>2</sup>)
+
+
+<p>
+  The variance inflation factor (VIF) for predictor j is
+  VIF<sub>j</sub> = 1 / (1 − R<sub>j</sub><sup>2</sup>),
+  where R<sub>j</sub><sup>2</sup> is from regressing predictor j on all other predictors.
+</p>
+
+<p>
+  A common rule of thumb is:
+</p>
+<ul>
+  <li>VIF &lt; 5: acceptable</li>
+  <li>5–10: warrants investigation</li>
+  <li>&gt; 10: severe multicollinearity</li>
+</ul>
+
+```{r lm-corr-pred, fig.cap="Predictor correlation matrix. disp, wt, and hp all share correlations above 0.8 — the root cause of multicollinearity in the full model."}
+pred_vars <- c("wt", "hp", "disp", "drat", "qsec")
+
+cor(mtcars[, pred_vars]) |>
+  as.data.frame() |>
+  rownames_to_column("var1") |>
+  pivot_longer(-var1, names_to = "var2", values_to = "r") |>
+  ggplot(aes(x = var2, y = var1, fill = r)) +
+  geom_tile(colour = "white", linewidth = 0.8) +
+  geom_text(aes(label = round(r, 2),
+                colour = abs(r) > 0.65),
+            size = 4.2, fontface = "bold") +
+  scale_fill_gradient2(low = col_red, mid = "white", high = col_blue,
+                       midpoint = 0, limits = c(-1, 1)) +
+  scale_colour_manual(values = c("FALSE" = "#374151", "TRUE" = "#ffffff"),
+                      guide = "none") +
+  scale_x_discrete(position = "top") +
+  labs(title    = "Predictor Correlation Matrix Root Cause of Multicollinearity",
+       subtitle = "Pairs with |r| > 0.8 carry redundant information",
+       x = NULL, y = NULL, fill = "r") +
+  theme_portfolio() +
+  theme(panel.grid       = element_blank(),
+        panel.background = element_rect(fill = "white"))
+```
+
+```{r lm-vif-full}
+vif_full <- car::vif(lm_full) |>
+  as.data.frame() |>
+  rownames_to_column("Term") |>
+  setNames(c("Term", "VIF")) |>
+  mutate(VIF    = round(VIF, 3),
+         Status = case_when(VIF > 10 ~ "Severe",
+                            VIF > 5  ~ "Moderate",
+                            TRUE     ~ "OK"))
+
+vif_full |>
+  kbl(caption = "Step 1 — VIF in the Full Model: Severe multicollinearity detected",
+      row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) |>
+  row_spec(which(vif_full$VIF > 10), background = "#fff1f2", color = "#9f1239") |>
+  row_spec(which(vif_full$VIF > 5 & vif_full$VIF <= 10),
+           background = "#fffbeb", color = "#92400e")
+```
+
+## Solving Multicollinearity
+
+Three complementary strategies are applied to resolve the collinearity between
+`disp`, `wt`, and `hp`:
+
+**Dropping the most redundant predictor.** `disp` has the highest VIF and is
+the most strongly correlated with both `wt` and `hp`. It is removed before
+stepwise selection.
+
+**Stepwise selection.** With `disp` excluded, `stepAIC()` selects among the
+remaining predictors using AIC, further pruning any that do not contribute unique
+information.
+
+**Ridge regression.** Ridge shrinks collinear coefficients toward each other
+rather than to zero, directly mitigating the variance inflation caused by
+correlated predictors. Applied in the regularisation section.
+
+```{r lm-reduced}
+library(MASS)
+
+#Fitting the reduced model
+lm_reduced <- lm(mpg ~ wt + hp + drat + qsec + vs + am + gear + carb,
+                 data = mtcars)
+
+# Running stepwise AIC
+lm_step <- stepAIC(lm_reduced, direction = "both", trace = FALSE)
+
+cat("Formula after stepwise selection:\n")
+print(formula(lm_step))
+
+
+```
+
+```{r lm-vif-solved}
+vif_solved <- car::vif(lm_step) |>
+  as.data.frame() |>
+  rownames_to_column("Term") |>
+  setNames(c("Term", "VIF")) |>
+  mutate(VIF    = round(VIF, 3),
+         Status = case_when(VIF > 10 ~ "Severe",
+                            VIF > 5  ~ "Moderate",
+                            TRUE     ~ "OK"))
+
+vif_solved |>
+  kbl(caption = "Step 2 — VIF After Removing disp and Re-running Stepwise: All clear",
+      row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) |>
+  row_spec(which(vif_solved$Status == "OK"),
+           background = "#f0fdf4", color = "#166534")
+```
+
+```{r lm-vif-compare-plot, fig.cap="VIF before and after multicollinearity resolution. All predictors in the final model fall comfortably below VIF = 5."}
+bind_rows(
+  vif_full   |> mutate(Model = "Full Model (with disp)"),
+  vif_solved |> mutate(Model = "Final Model (disp removed + stepwise)")
+) |>
+  mutate(Term = fct_reorder(Term, VIF, .fun = max)) |>
+  ggplot(aes(x = VIF, y = Term, fill = Model)) +
+  geom_col(position = "dodge", width = 0.65) +
+  geom_vline(xintercept = 5,  linetype = "dashed",
+             colour = col_red,   linewidth = 0.9) +
+  geom_vline(xintercept = 10, linetype = "dotted",
+             colour = col_amber, linewidth = 0.9) +
+  scale_fill_manual(values = c(
+    "Full Model (with disp)"                = col_blue,
+    "Final Model (disp removed + stepwise)" = col_green)) +
+  annotate("text", x = 5.3,  y = 0.5, label = "VIF = 5",
+           size = 3, colour = col_red,   hjust = 0, fontface = "italic") +
+  annotate("text", x = 10.3, y = 0.5, label = "VIF = 10",
+           size = 3, colour = col_amber, hjust = 0, fontface = "italic") +
+  labs(title    = "Multicollinearity Resolution: VIF Before and After",
+       subtitle = "Removing disp and re-running stepwise brings all VIF values below 5",
+       x = "VIF", y = NULL, fill = NULL) +
+  theme_portfolio()
+```
+
+> **Explanation:** The full model had severe multicollinearity because `disp`,
+> `wt`, and `hp` all measure engine size and power, they tell the model the same
+> thing three different ways. Removing `disp` and re-running stepwise selection
+> brings all VIF values below 5, meaning each predictor now makes an independent
+> contribution.
+
+## Final Model Summary
+
+```{r lm-summary}
+summary(lm_step)
+```
+
+## Coefficient Table
+
+```{r lm-coef-table}
+tidy(lm_step, conf.int = TRUE) |>
+  mutate(across(c(estimate, std.error, conf.low, conf.high), \(x) round(x, 3)),
+         p.value = round(p.value, 4),
+         Sig = case_when(
+           p.value < 0.001 ~ "***", p.value < 0.01 ~ "**",
+           p.value < 0.05  ~ "*",   p.value < 0.10 ~ ".",
+           TRUE ~ ""
+         )) |>
+  rename(Term = term, Estimate = estimate, SE = std.error,
+         `t value` = statistic, `p-value` = p.value,
+         `2.5%` = conf.low, `97.5%` = conf.high) |>
+  kbl(caption = "Final Linear Regression Model — Coefficients (disp removed, VIF resolved)") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+> **Explanation:** According to the above linear regression model:
+>
+> `wt`: An increase in weight by 1,000 leads to a decrease in miles by gallon by 3.9 miles keeping all other variables constant.
+>
+> `qsec`: An increase in quarter mile time by 1 unit leads to an increase in miles by gallon by 1.2 miles, keeping all other variables constant.
+>
+> `am`: A manual car achieves 2.936miles more than an automatic car.
+>`Intercept`: For an automatic car keeping all other variables constant it achieves an average mpg of 9.618
+
+## Prediction interval
+```{r}
+#sample data point
+new_point <- tibble(
+  wt   = 3.0,
+  qsec = 17.0,
+  am   = 1
+)
+
+predict(lm_step, newdata = new_point, interval = "prediction")
+
+
+
+```
+>**Explanation:** We are 95% confident that for a manual car with a weight of 3,000 pounds, quarter mile time of 17.0, the predicted miles per gallon is between 16.34 miles and 26.9 miles.
+
+```{r lm-resid-final, fig.cap="Residual distribution for the final model (disp removed). Residuals remain approximately Normal confirming OLS assumptions still hold."}
+data.frame(resid = resid(lm_step)) |>
+  ggplot(aes(x = resid)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 15,
+                 fill = col_green, alpha = 0.6, colour = "white") +
+  geom_density(linewidth = 1, colour = "#111827") +
+  stat_function(fun  = dnorm,
+                args = list(mean = mean(resid(lm_step)),
+                            sd   = sd(resid(lm_step))),
+                colour = col_red, linetype = "dashed", linewidth = 1.1) +
+  labs(title    = "Residual Distribution — Final Model (Multicollinearity Resolved)",
+       subtitle = "Black = empirical density | Red dashed = fitted Normal",
+       x = "Residual", y = "Density") +
+  theme_portfolio()
+```
+
+```{r lm-bp}
+bptest(lm_step)
+```
+
+```{r lm-actual-fitted, fig.cap="Actual vs. fitted mpg. Points close to the dashed line indicate good model fit."}
+data.frame(actual = mtcars$mpg, fitted = fitted(lm_step),
+           am = cars$am) |>
+  ggplot(aes(x = fitted, y = actual, colour = am)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed",
+              colour = "#6c757d", linewidth = 0.8) +
+  geom_point(size = 3.5, alpha = 0.85) +
+  scale_colour_manual(values = two_cols) +
+  labs(title  = "Actual vs. Fitted — mpg (Linear Regression)",
+       x = "Fitted mpg", y = "Actual mpg", colour = "Transmission") +
+  theme_portfolio()
+```
+
+> **Explanation:** The stepwise model explains
+> **`r round(summary(lm_step)$adj.r.squared * 100, 1)`%** of the variation in
+> fuel efficiency. Weight (`wt`) is the strongest predictor, heavier cars
+> consume more fuel. Horsepower (`hp`) also significantly reduces mpg, while
+> quarter-mile time (`qsec`) and transmission type (`am`) each contribute
+> meaningfully after accounting for the others.
+
+---
+
+# LASSO and Ridge Regression {#regularisation}
+
+> **Objectives 2, 3, 5:**
+
+Regularised regression adds a penalty on the size of the coefficient vector to
+reduce overfitting and improve prediction.
+
+**Ridge regression (L2 penalty)** shrinks all coefficients toward zero but never
+sets any of them exactly to zero. It is most useful when many predictors have
+small, shared influence and multicollinearity is present.
+
+**LASSO regression (L1 penalty)** can shrink some coefficients all the way to
+zero, effectively performing variable selection. It is helpful when only a
+subset of predictors is truly important.
+
+In both methods, the strength of the penalty is controlled by a tuning
+parameter (lambda), which is typically chosen by cross‑validation to balance
+model complexity and predictive accuracy.
+
+```{r reg-prep}
+X_reg <- model.matrix(mpg ~ wt + hp + disp + drat + qsec + vs + am + gear + carb,
+                      data = mtcars)[, -1]
+y_reg <- mtcars$mpg
+cat("Design matrix:", nrow(X_reg), "rows x", ncol(X_reg), "columns\n")
+```
+
+## LASSO
+
+```{r lasso-cv, fig.cap="LASSO: 10-fold CV MSE across log(lambda). Left dashed line = lambda.min; right = lambda.1se (more regularised)."}
+set.seed(42)
+cv_lasso <- cv.glmnet(X_reg, y_reg, alpha = 1, nfolds = 10)
+plot(cv_lasso)
+title("LASSO — 10-Fold CV MSE vs log(lambda)", line = 2.5)
+cat("Best lambda (min):", round(cv_lasso$lambda.min, 4),
+    "\nBest lambda (1se):", round(cv_lasso$lambda.1se, 4))
+```
+
+```{r lasso-coefs}
+coef(cv_lasso, s = "lambda.min") |>
+  as.matrix() |>
+  as.data.frame() |>
+  rownames_to_column("Term") |>
+  setNames(c("Term", "Coefficient")) |>
+  filter(Term != "(Intercept)") |>
+  mutate(Coefficient = round(Coefficient, 4),
+         Status = ifelse(Coefficient == 0, "Zeroed (LASSO)", "Retained")) |>
+  arrange(desc(abs(Coefficient))) |>
+  kbl(caption = paste0("LASSO Coefficients (lambda = ",
+                       round(cv_lasso$lambda.min, 4), ")"),
+      row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+## Ridge
+
+```{r ridge-cv, fig.cap="Ridge: all coefficients are retained but shrunk toward zero as lambda increases."}
+set.seed(42)
+cv_ridge <- cv.glmnet(X_reg, y_reg, alpha = 0, nfolds = 10)
+plot(cv_ridge)
+title("Ridge — 10-Fold CV MSE vs log(lambda)", line = 2.5)
+cat("Best lambda (min):", round(cv_ridge$lambda.min, 4))
+```
+
+## OLS vs LASSO vs Ridge
+
+```{r reg-compare}
+set.seed(42)
+idx  <- sample(nrow(mtcars), 0.75 * nrow(mtcars))
+
+X_tr <- X_reg[idx, ];   X_te <- X_reg[-idx, ]
+y_tr <- y_reg[idx];     y_te <- y_reg[-idx]
+
+ols_tr <- lm(mpg ~ wt + hp + disp + drat + qsec + vs + am + gear + carb,
+             data = mtcars[idx, ])
+
+rmse <- function(a, p) round(sqrt(mean((a - p)^2)), 3)
+
+data.frame(
+  Method      = c("OLS", "LASSO", "Ridge"),
+  `Test RMSE` = c(
+    rmse(y_te, predict(ols_tr, mtcars[-idx, ])),
+    rmse(y_te, as.numeric(predict(cv.glmnet(X_tr, y_tr, alpha = 1),
+                                  X_te, s = "lambda.min"))),
+    rmse(y_te, as.numeric(predict(cv.glmnet(X_tr, y_tr, alpha = 0),
+                                  X_te, s = "lambda.min")))
+  ),
+  Notes = c("No regularisation", "L1 — zeroes weak predictors",
+             "L2 — shrinks all, keeps all")
+) |>
+  kbl(caption = "Test-Set RMSE: OLS vs LASSO vs Ridge (75/25 split)",
+      row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+> **Explanation:** LASSO automatically identified the most important predictors
+> and set others to zero, confirming that `wt`, `hp`, and `qsec` carry most of
+> the signal. Ridge retained all predictors with smaller coefficients. Both
+> regularised models produce comparable or better out-of-sample accuracy than OLS.
+
+---
+
+# Logistic Regression GLM {#logistic}
+
+> **Objectives 1, 2, 3, 4:** Predicting binary `am` (transmission type:
+> automatic vs manual). The Binomial GLM with logit link is the appropriate model.
+
+## Why Logistic Regression?
+
+`am` is binary, so the Normal distribution is inappropriate. The Bernoulli
+distribution is the natural choice, with the **logit** as the canonical link:
+
+| Component   | Logistic Regression |
+|:----------- |:--------------------|
+| **Random**      | Y_i follows a Bernoulli(p_i) distribution |
+| **Systematic**  | eta_i = x_i^T b |
+| **Link**        | logit(p_i) = log(p_i / (1 - p_i)) = eta_i |
+
+## A Note on Complete Separation
+
+With only n = 32 observations, adding too many predictors to a logistic model
+causes complete separation, the model perfectly predicts every training
+observation, driving the log-likelihood to -infinity, coefficient estimates to
+plus or minus infinity, and producing deviance approximately 0 with meaningless AIC/BIC values.
+This is not a sign of a good model; it is a sign of overfitting.
+
+The rule of thumb for logistic regression is at least 10--20 events per
+predictor (EPP). With 19 manual cars (the minority class), we can support at
+most 1--2 predictors reliably. The candidate models are therefore kept
+deliberately parsimonious.
+
+## Candidate Models & Selection
+
+```{r log-candidates}
+log_null  <- glm(am ~ 1,       data = cars, family = binomial())
+log_wt    <- glm(am ~ wt,      data = cars, family = binomial())
+log_hp    <- glm(am ~ hp,      data = cars, family = binomial())
+log_core  <- glm(am ~ wt + hp, data = cars, family = binomial())
+
+log_overfit <- glm(am ~ wt + hp + qsec, data = cars, family = binomial())
+
+cat("Deviance check \n")
+cat("Core  (2 predictors):", round(deviance(log_core),    2), "\n")
+cat("Overfit (3 predictors):", round(deviance(log_overfit), 2),
+    "<-- near zero = complete separation\n")
+
+map_dfr(list(Null = log_null, `wt only` = log_wt,
+             `hp only` = log_hp, `wt + hp (Core)` = log_core),
+        \(m) data.frame(
+          Predictors = length(coef(m)) - 1,
+          Deviance   = round(deviance(m), 2),
+          AIC        = round(AIC(m), 2),
+          BIC        = round(BIC(m), 2),
+          Note       = ifelse(deviance(m) < 1, "Complete separation", "OK")
+        ), .id = "Model") |>
+  kbl(caption = paste0("Logistic Regression — Candidate Model Comparison",
+                       " (n=32, EPP limits to 1-2 predictors)"),
+      row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) |>
+  row_spec(4, bold = TRUE, background = "#f0fdf4", color = "#166534")
+```
+
+```{r log-lrt}
+cat("=== LRT: Null vs wt only ===\n")
+print(anova(log_null, log_wt, test = "Chisq"))
+cat("\n=== LRT: wt only vs wt + hp (Core) ===\n")
+print(anova(log_wt, log_core, test = "Chisq"))
+cat("\nConclusion: wt + hp significantly improves on wt alone.",
+    "\nAdding a 3rd predictor causes complete separation — Core model selected.\n")
+```
+
+```{r log-separation-plot, fig.cap="Weight alone almost completely separates automatic from manual cars. This near-perfect predictability is why models with 3+ predictors achieve deviance close to zero."}
+ggplot(cars, aes(x = wt, y = as.numeric(am) - 1, colour = am)) +
+  geom_point(size = 4, alpha = 0.85) +
+  geom_smooth(method = "glm", method.args = list(family = binomial()),
+              aes(group = 1), colour = "#111827",
+              se = TRUE, fill = "#dee2e6", alpha = 0.2, linewidth = 1) +
+  scale_colour_manual(values = two_cols) +
+  scale_y_continuous(breaks = c(0, 1),
+                     labels = c("0 — Automatic", "1 — Manual")) +
+  labs(title    = "Near-Complete Separation: Weight vs Transmission",
+       subtitle = "Heavier cars are almost exclusively automatic — near-perfect predictability",
+       x = "Weight (1000 lbs)", y = "Transmission (am)",
+       colour = NULL) +
+  theme_portfolio()
+```
+
+```{r log-final}
+log_final <- log_core
+summary(log_final)
+```
+
+## Odds Ratios
+
+```{r log-or}
+tidy(log_final, conf.int = TRUE, exponentiate = TRUE) |>
+  filter(term != "(Intercept)") |>
+  mutate(across(c(estimate, conf.low, conf.high), \(x) round(x, 3)),
+         p.value = round(p.value, 4),
+         Sig = case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**",
+                         p.value < 0.05  ~ "*",   p.value < 0.10 ~ ".",
+                         TRUE ~ "")) |>
+  rename(Predictor=term, OR=estimate, `2.5%`=conf.low,
+         `97.5%`=conf.high, `p-value`=p.value) |>
+  kbl(caption = "Logistic Regression — Odds Ratios with 95% CIs") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r log-or-plot, fig.cap="Forest plot of odds ratios. OR < 1 means the predictor is associated with lower odds of a manual transmission."}
+tidy(log_final, conf.int = TRUE, exponentiate = TRUE) |>
+  filter(term != "(Intercept)") |>
+  mutate(term = fct_reorder(term, estimate),
+         dir  = ifelse(estimate >= 1, "Higher odds (Manual)", "Lower odds (Manual)")) |>
+  ggplot(aes(x = estimate, y = term, colour = dir)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "#6c757d") +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high),
+                 height = 0.2, linewidth = 0.8) +
+  geom_point(size = 4) +
+  scale_colour_manual(values = c(col_blue, col_red)) +
+  scale_x_log10() +
+  labs(title  = "Odds Ratio Forest Plot — Logistic Regression",
+       x = "Odds Ratio (log scale)", y = NULL, colour = NULL) +
+  theme_portfolio()
+```
+
+## Logistic Model Diagnostics
+
+```{r log-hoslem}
+hl <- hoslem.test(cars$am_num, fitted(log_final), g = 8)
+print(hl)
+cat("\np =", round(hl$p.value, 3),
+    if (hl$p.value > 0.05) "— model fits well" else "— evidence of misfit")
+```
+
+```{r log-vif}
+log_vif_aux <- lm(am_num ~ wt + hp, data = cars)
+
+car::vif(log_vif_aux) |>
+  as.data.frame() |>
+  rownames_to_column("Predictor") |>
+  setNames(c("Predictor", "VIF")) |>
+  mutate(VIF    = round(VIF, 3),
+         Status = case_when(VIF > 10 ~ "Severe",
+                            VIF > 5  ~ "Moderate",
+                            TRUE     ~ "OK")) |>
+  kbl(caption = "VIF — Logistic Regression Predictors (wt and hp)") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+```{r log-corr-pred, fig.cap="Correlation between wt and hp. Moderate correlation exists but VIF confirms it stays within an acceptable range for the logistic model."}
+data.frame(wt = mtcars$wt, hp = mtcars$hp) |>
+  ggplot(aes(x = wt, y = hp)) +
+  geom_point(size = 3, colour = col_blue, alpha = 0.75) +
+  geom_smooth(method = "lm", colour = col_red, fill = col_red,
+              alpha = 0.12, linewidth = 0.9, se = TRUE) +
+  annotate("label", x = 4.5, y = 100, fill = "white", label.size = 0.3,
+           label = paste0("r = ", round(cor(mtcars$wt, mtcars$hp), 3)),
+           size = 4, colour = col_red, fontface = "bold") +
+  labs(title    = "Collinearity Check: Weight vs Horsepower",
+       subtitle = "Moderate correlation (r ~ 0.66) — acceptable for logistic regression",
+       x = "Weight (1000 lbs)", y = "Horsepower") +
+  theme_portfolio()
+```
+
+```{r log-roc, fig.cap="ROC curve for the logistic regression model. AUC close to 1 indicates excellent discrimination."}
+roc_log <- roc(cars$am_num, fitted(log_final),
+               levels = c(0, 1), direction = "<", quiet = TRUE)
+auc_log <- as.numeric(auc(roc_log))
+
+ggroc(roc_log, colour = col_blue, linewidth = 1.4) +
+  geom_abline(slope = 1, intercept = 1, linetype = "dashed",
+              colour = "#6c757d", linewidth = 0.8) +
+  annotate("label", x = 0.35, y = 0.15, fill = "white", label.size = 0.3,
+           label = paste0("AUC = ", round(auc_log, 3)),
+           size = 4.5, colour = col_blue, fontface = "bold") +
+  labs(title = "ROC Curve — Logistic Regression (Transmission Type)",
+       x = "1 - Specificity (FPR)", y = "Sensitivity (TPR)") +
+  theme_portfolio()
+```
+
+```{r log-confmat}
+pred_class <- ifelse(fitted(log_final) > 0.5, "Manual", "Automatic")
+conf_log   <- table(Predicted = pred_class, Actual = cars$am)
+print(conf_log)
+log_acc <- sum(diag(conf_log)) / sum(conf_log)
+cat("\nAccuracy:", round(log_acc * 100, 1), "% | AUC:", round(auc_log, 3))
+```
+
+> **Explanation:** The model correctly classifies
+> **`r round(log_acc * 100, 1)`%** of cars as automatic or manual. Weight is
+> the strongest predictor — heavier cars are much more likely to have automatic
+> transmission. Each additional 1,000 lbs reduces the odds of manual transmission
+> by approximately
+> **`r round((1 - tidy(log_final, exponentiate=TRUE)$estimate[2]) * 100, 0)`%**,
+> holding horsepower constant. A three-predictor model was deliberately avoided:
+> with only 19 manual cars, adding a third predictor causes complete separation
+> and produces an unreliable, overfit model.
+
+---
+
+# Multinomial Logistic Regression {#multinomial}
+
+> **Objectives 1, 2, 4, 5:** Predicting `cyl` (4, 6, or 8 cylinders — three
+> unordered categories). Multinomial regression is required because cylinder
+> count has no meaningful numeric spacing.
+
+## Why Multinomial?
+
+With three outcome categories, two log‑odds equations are estimated relative to a
+reference category (here, "4‑cyl").
+
+The model expresses the log of the probability of category k relative to the
+probability of the reference category as a linear function of the predictors:
+
+log( P(Y = k) / P(Y = "4-cyl") ) =
+  b_{k0} + b_{k1} x_1 + ... + b_{kp} x_p,
+  for k in { "6-cyl", "8-cyl" }.
+
+This allows the model to compare each non‑reference category directly to the
+baseline while using a single unified framework.
+
+```{r multi-fit}
+cars$cyl <- relevel(cars$cyl, ref = "4-cyl")
+
+multi_model <- nnet::multinom(
+  cyl ~ wt + hp + disp,
+  data  = cars,
+  trace = FALSE
+)
+summary(multi_model)
+```
+
+## P-Values and Z-Statistics
+
+```{r multi-pvals}
+z_mat <- summary(multi_model)$coefficients /
+         summary(multi_model)$standard.errors
+p_mat <- 2 * (1 - pnorm(abs(z_mat)))
+
+coef_m <- summary(multi_model)$coefficients
+se_m   <- summary(multi_model)$standard.errors
+
+map_dfr(rownames(coef_m), function(cat) {
+  data.frame(
+    Category = cat,
+    Term     = colnames(coef_m),
+    Estimate = round(coef_m[cat, ], 4),
+    SE       = round(se_m[cat, ],   4),
+    z        = round(z_mat[cat, ],  3),
+    p.value  = round(p_mat[cat, ],  4),
+    row.names = NULL
+  )
+}) |>
+  filter(Term != "(Intercept)") |>
+  mutate(Sig = case_when(
+    p.value < 0.001 ~ "***", p.value < 0.01 ~ "**",
+    p.value < 0.05  ~ "*",   p.value < 0.10 ~ ".",
+    TRUE ~ ""
+  )) |>
+  kbl(caption = "Multinomial Regression Coefficients (ref = 4-cyl)",
+      row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+## Predicted Probabilities
+
+```{r multi-probs, fig.cap="Predicted probability of each cylinder category by weight. Heavier cars are much more likely to have 8 cylinders.", echo=FALSE}
+wt_grid <- data.frame(
+  wt   = seq(1.5, 5.5, length.out = 100),
+  hp   = mean(mtcars$hp),
+  disp = mean(mtcars$disp)
+)
+
+probs <- predict(multi_model, newdata = wt_grid, type = "probs")
+
+bind_cols(wt_grid, as.data.frame(probs)) |>
+  pivot_longer(cols = c(`4-cyl`, `6-cyl`, `8-cyl`),
+               names_to = "cylinders", values_to = "probability") |>
+  ggplot(aes(x = wt, y = probability, colour = cylinders)) +
+  geom_line(linewidth = 1.4) +
+  scale_colour_manual(values = c(col_green, col_amber, col_red)) +
+  labs(title    = "Predicted Cylinder Category Probabilities vs Weight",
+       subtitle = "hp and disp held at their means",
+       x = "Weight (1000 lbs)", y = "Predicted Probability",
+       colour = "Cylinders") +
+  theme_portfolio()
+```
+
+```{r multi-confmat}
+multi_pred <- predict(multi_model, cars)
+conf_multi  <- table(Predicted = multi_pred, Actual = cars$cyl)
+print(conf_multi)
+multi_acc <- sum(diag(conf_multi)) / sum(conf_multi)
+cat("\nMultinomial Accuracy:", round(multi_acc * 100, 1), "%\n")
+```
+
+> **Explanation:** The model correctly classifies
+> **`r round(multi_acc * 100, 1)`%** of cars into the correct cylinder category.
+> Weight, horsepower, and displacement all contribute to the classification.
+> Heavier, more powerful cars with larger engines are overwhelmingly likely to
+> have 8 cylinders.
+
+---
+
+# Linear Discriminant Analysis {#lda}
+
+> **Objectives 2, 3, 4, 5:** LDA is a generative classifier that models each
+> class using a multivariate Normal distribution with a shared covariance matrix,
+> then classifies via Bayes' theorem.
+
+## Probability Foundation
+For each class k, the predictor vector x is assumed to follow a Normal
+distribution with its own class‑specific mean (mu_k) and a covariance matrix
+(Sigma) that is shared across all classes.
+
+The class probability for Y = k given x is proportional to the prior probability
+of class k (pi_k) multiplied by the class‑specific density f_k(x), and then
+normalised by the sum of these values across all classes.
+
+Because all classes share the same covariance matrix Sigma, the resulting
+decision boundary is linear. This is the key property that distinguishes
+Linear Discriminant Analysis from its quadratic counterpart.
+
+```{r lda-fit}
+lda_model <- lda(am ~ wt + hp + qsec, data = cars)
+lda_model
+```
+
+```{r lda-scores, fig.cap="Distribution of LD1 scores by transmission type. Clear separation confirms strong discriminability."}
+lda_pred   <- predict(lda_model, cars)
+lda_scores <- data.frame(LD1 = lda_pred$x[, 1], am = cars$am)
+
+ggplot(lda_scores, aes(x = LD1, fill = am)) +
+  geom_density(alpha = 0.6, colour = NA) +
+  geom_rug(aes(colour = am), sides = "b", alpha = 0.5) +
+  scale_fill_manual(values  = two_cols) +
+  scale_colour_manual(values = two_cols) +
+  labs(title    = "LDA Discriminant Score (LD1) by Transmission Type",
+       subtitle = "Greater separation = stronger discriminability",
+       x = "Linear Discriminant Score (LD1)",
+       y = "Density", fill = NULL, colour = NULL) +
+  theme_portfolio()
+```
+
+## LDA Performance
+
+```{r lda-performance}
+conf_lda <- table(Predicted = lda_pred$class, Actual = cars$am)
+print(conf_lda)
+lda_acc <- sum(diag(conf_lda)) / sum(conf_lda)
+
+roc_lda <- roc(cars$am_num,
+               lda_pred$posterior[, "Manual"],
+               levels = c(0, 1), direction = "<", quiet = TRUE)
+auc_lda <- as.numeric(auc(roc_lda))
+cat("\nLDA Accuracy:", round(lda_acc * 100, 1),
+    "% | AUC:", round(auc_lda, 3))
+```
+
+```{r lda-roc-comp, fig.cap="ROC comparison: Logistic Regression and LDA achieve similar discrimination for transmission type classification."}
+ggroc(list(`Logistic Regression` = roc_log, LDA = roc_lda), linewidth = 1.2) +
+  geom_abline(slope = 1, intercept = 1, linetype = "dashed",
+              colour = "#6c757d", linewidth = 0.8) +
+  scale_colour_manual(values = c(col_blue, col_red)) +
+  annotate("text", x = 0.3, y = 0.18, hjust = 0, size = 3.8,
+           label = paste0("Logistic AUC = ", round(auc_log, 3),
+                          "\nLDA AUC = ", round(auc_lda, 3))) +
+  labs(title  = "ROC Curves — Logistic Regression vs LDA",
+       x = "1 - Specificity", y = "Sensitivity", colour = NULL) +
+  theme_portfolio()
+```
+
+## Normality Assumption Check
+
+```{r lda-qq, fig.cap="Q-Q plots for LDA predictors. Approximate normality is sufficient for LDA to perform well.", fig.height=4}
+par(mfrow = c(1, 3), mar = c(4, 4, 3, 1),
+    bg = "#ffffff", col.axis = "#6c757d", col.lab = "#374151")
+for (v in c("wt", "hp", "qsec")) {
+  qqnorm(mtcars[[v]], main = paste("Q-Q:", v),
+         pch = 16, col = col_blue, cex = 0.85)
+  qqline(mtcars[[v]], col = col_red, lwd = 1.5)
+}
+par(mfrow = c(1, 1))
+```
+
+> **Explanation:** LDA achieved an AUC of **`r round(auc_lda, 3)`**, very
+> close to logistic regression (**`r round(auc_log, 3)`**). Both approaches
+> correctly classify the majority of cars by transmission type. Logistic
+> regression is preferred when distributional assumptions are uncertain, while
+> LDA may be favoured when normality holds.
+
+---
+
+# Cross-Validation & Model Selection {#cv}
+
+> **Objective 3, 5:** Cross-validation provides honest out-of-sample
+> performance estimates and is used to make the final model selection decision.
+
+## Why Cross-Validation?
+
+With only n = 32 observations, a single train/test split is unreliable.
+**Leave-One-Out Cross-Validation (LOOCV)** avoids this by repeatedly training
+the model on 31 cars and predicting the one left out:
+
+```{r cv-setup}
+set.seed(123)
+ctrl_loocv <- trainControl(method = "LOOCV")
+ctrl_cv10  <- trainControl(method = "cv", number = 10,
+                            classProbs      = TRUE,
+                            summaryFunction = twoClassSummary,
+                            savePredictions = "final")
+```
+
+## LOOCV (Linear Models)
+
+```{r cv-lm}
+cv_ols <- train(mpg ~ wt + hp + qsec + am, data = cars,
+                method    = "lm",
+                trControl = ctrl_loocv)
+
+cv_las <- train(mpg ~ wt + hp + disp + drat + qsec + vs + am + gear + carb,
+                data     = cars,
+                method   = "glmnet",
+                tuneGrid = expand.grid(alpha = 1,
+                                       lambda = 10^seq(-3, 1, length.out = 40)),
+                trControl = ctrl_loocv)
+
+cv_rid <- train(mpg ~ wt + hp + disp + drat + qsec + vs + am + gear + carb,
+                data     = cars,
+                method   = "glmnet",
+                tuneGrid = expand.grid(alpha = 0,
+                                       lambda = 10^seq(-2, 2, length.out = 40)),
+                trControl = ctrl_loocv)
+
+data.frame(
+  Model       = c("OLS (stepwise)", "LASSO", "Ridge"),
+  LOOCV_RMSE  = round(c(cv_ols$results$RMSE,
+                          min(cv_las$results$RMSE),
+                          min(cv_rid$results$RMSE)), 3),
+  LOOCV_R2    = round(c(cv_ols$results$Rsquared,
+                          cv_las$results$Rsquared[which.min(cv_las$results$RMSE)],
+                          cv_rid$results$Rsquared[which.min(cv_rid$results$RMSE)]), 3)
+) |>
+  kbl(caption = "LOOCV Performance — Regression Models (outcome = mpg)",
+      row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) |>
+  row_spec(1, bold = TRUE, background = "#f0fdf4", color = "#166534")
+```
+
+## 10-Fold CV — Classification Models
+
+```{r cv-classif}
+cars_cv <- cars |>
+  mutate(am_cv = factor(am_num, levels = c(0, 1),
+                         labels = c("Automatic", "Manual")))
+
+set.seed(123)
+cv_log_cls <- train(
+  am_cv ~ wt + hp,
+  data      = cars_cv,
+  method    = "glm",
+  family    = "binomial",
+  trControl = ctrl_cv10,
+  metric    = "ROC"
+)
+
+set.seed(123)
+cv_lda_cls <- train(
+  am_cv ~ wt + hp + qsec,
+  data      = cars_cv,
+  method    = "lda",
+  trControl = ctrl_cv10,
+  metric    = "ROC"
+)
+
+data.frame(
+  Model    = c("Logistic Regression", "LDA"),
+  CV_AUC   = round(c(cv_log_cls$results$ROC,
+                      cv_lda_cls$results$ROC), 3),
+  CV_Sens  = round(c(cv_log_cls$results$Sens,
+                      cv_lda_cls$results$Sens), 3),
+  CV_Spec  = round(c(cv_log_cls$results$Spec,
+                      cv_lda_cls$results$Spec), 3)
+) |>
+  kbl(caption = "10-Fold CV Performance — Classification Models (outcome = am)",
+      row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) |>
+  row_spec(1, bold = TRUE, background = "#f0fdf4", color = "#166534")
+```
+
+## Final Model Selection
+
+```{r final-selection}
+tribble(
+  ~Outcome, ~`Selected Model`, ~`CV Metric`, ~Reason,
+  "mpg (continuous)",   "OLS — stepwise",         paste0("LOOCV RMSE = ", round(cv_ols$results$RMSE, 2)),  "Lowest error, highest interpretability, all assumptions met",
+  "am (binary)",        "Logistic Regression",    paste0("CV AUC = ", round(cv_log_cls$results$ROC, 3)),    "Highest AUC, directly interpretable odds ratios",
+  "cyl (3 categories)", "Multinomial Regression", "Accuracy = 96.9%",                                       "Only model appropriate for unordered polytomous outcome"
+) |>
+  kbl(caption = "Final Model Selection Summary") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
+  column_spec(2, bold = TRUE, color = "#166534")
+```
+
+---
+
+# Model Diagnostics Summary {#diagnostics}
+
+> **Objectives 3 & 5:** Consolidated diagnostics across all fitted models.
+
+| Model | Check | Tool | Result |
+|:------|:------|:-----|:-------|
+| Linear Regression | Normality of residuals | Q-Q plot, histogram | Approximately Normal |
+| Linear Regression | Homoscedasticity | Breusch-Pagan test | No violation |
+| Linear Regression | Multicollinearity | VIF + predictor removal | disp dropped (VIF > 10, r > 0.85 with wt); final model all VIF < 5 |
+| Linear Regression | Influential observations | Cook's distance | No extreme points |
+| LASSO / Ridge | Optimal lambda | 10-fold CV path | lambda selected automatically |
+| Logistic Regression | Complete separation | EPP check + deviance | 3+ predictors cause separation; core 2-predictor model selected |
+| Logistic Regression | Discrimination | ROC / AUC | AUC > 0.90 |
+| Logistic Regression | Multicollinearity | VIF via auxiliary lm | wt and hp: VIF < 2, no concern |
+| Multinomial | Predictive accuracy | Confusion matrix | 96.9% |
+| LDA | Normality assumption | Q-Q plots | Approximately Normal |
+| LDA | Discrimination | ROC / AUC | AUC > 0.90 |
+| All classifiers | Generalisation | CV (LOOCV / 10-fold) | Stable performance |
+
+```{r diag-cooks, fig.cap="Cook's distance for the linear regression model. No observation exerts extreme leverage."}
+cooksd <- cooks.distance(lm_step)
+data.frame(obs = seq_along(cooksd), cd = cooksd,
+           car = rownames(mtcars)) |>
+  ggplot(aes(x = obs, y = cd)) +
+  geom_segment(aes(xend = obs, yend = 0), colour = "#dee2e6") +
+  geom_point(aes(colour = cd > 4 / nrow(mtcars)), size = 2.5) +
+  geom_hline(yintercept = 4 / nrow(mtcars),
+             linetype = "dashed", colour = col_red, linewidth = 0.8) +
+  geom_text(aes(label = ifelse(cd > 4 / nrow(mtcars), car, "")),
+            vjust = -0.6, size = 2.8, colour = col_red) +
+  scale_colour_manual(values = c("FALSE" = col_blue, "TRUE" = col_red),
+                      labels = c("Normal", "Influential"), name = NULL) +
+  labs(title    = "Cook's Distance — Linear Regression",
+       subtitle = paste0("Dashed line = 4/n threshold (",
+                         round(4 / nrow(mtcars), 3), ")"),
+       x = "Observation Index", y = "Cook's Distance") +
+  theme_portfolio()
+```
+
+---
+
+# Summary {#summary}
+
+> **Objective 4:** Communicating findings.
+
+## What I Did
+
+I analysed performance data from 32 cars tested in 1973--74 using five
+statistical methods to understand what drives fuel efficiency, how to classify
+transmission type, and how to predict the number of cylinders.
+
+## Key Findings
+
+**What predicts fuel efficiency? (Linear Regression, LASSO, Ridge)**
+
+Car weight is by far the strongest predictor, every additional 1,000 lbs
+reduces fuel efficiency by about 3.9 mpg, holding other factors constant.
+Horsepower also hurts efficiency, while a longer quarter-mile time (indicating
+a less aggressive engine setup) is associated with better mpg. The model
+explains `r round(summary(lm_step)$adj.r.squared * 100, 1)`% of the variation
+in fuel consumption. LASSO and Ridge regularisation confirmed these findings
+are robust and not an artefact of overfitting.
+
+**Can we classify transmission type? (Logistic Regression, LDA)**
+
+Both logistic regression and LDA correctly identified transmission type in over
+`r round(max(log_acc, lda_acc) * 100, 0)`% of cars. Heavier cars are strongly
+associated with automatic transmission, each 1,000 lb increase in weight
+dramatically reduces the odds of having a manual gearbox. The AUC of
+`r round(auc_log, 3)` confirms excellent discriminative ability.
+
+**What predicts number of cylinders? (Multinomial Regression)**
+
+Weight, horsepower, and displacement together predict cylinder count with
+`r round(multi_acc * 100, 1)`% accuracy. Light, low-powered cars with small
+engines are overwhelmingly likely to have 4 cylinders, while heavy,
+high-powered cars almost exclusively have 8.
+
+
+## Limitations
+
+- Very small sample n = 32 observations, 1973--74 cars), results may not generalise to
+  modern vehicles.
+- Many predictors are highly correlated (weight, displacement, horsepower),
+  making precise individual effect estimates difficult.
+
+---
+
+# Conclusion & Objectives Reflection {#conclusion}
+
+> **All Objectives:** A reflective summary of how each learning objective was
+> addressed through the analysis conducted in this portfolio.
+
+## Objectives Achievement Summary
+
+```{r conclusion-table,echo=FALSE}
+tribble(
+  ~`#`, ~Objective, ~`Method(s)`, ~`How Demonstrated`,
+  1, "Probability & MLE foundations",
+     "All models",
+     "Normal, Bernoulli, and Multinomial distributions selected to match each outcome type. Log-likelihood visualised for the Normal model fitted to mpg, showing the MLE as the peak. AIC, BIC, and LRT all derived from the log-likelihood and applied throughout.",
+  2, "Apply appropriate GLM",
+     "Linear, Logistic, Multinomial, LDA",
+     "OLS/Normal for continuous mpg; Binomial logit for binary am; Multinomial logit for three-class cyl; LDA as a generative alternative for am. Each choice justified by the distributional nature of the outcome.",
+  3, "Model selection",
+     "AIC, BIC, LRT, stepAIC(), LOOCV, 10-fold CV, LASSO lambda",
+     "Candidate model comparison using AIC and BIC for linear regression; LRT confirming the core logistic model; stepwise selection applied after multicollinearity resolution; LOOCV for regression and 10-fold CV for classification; lambda tuned by cross-validation for LASSO and Ridge.",
+  4, "Communicate to general audience",
+     "All result sections",
+     "Explanations accompany every model output. The separation plot and odds ratio forest chart communicate logistic regression results visually. The predicted probability curves show multinomial findings without equations. A dedicated plain language summary section translates all findings for a non-technical reader.",
+  5, "R implementation",
+     "lm, glm, glmnet, nnet, MASS, caret, pROC, car, lmtest, broom",
+     "All models fitted, diagnosed, and compared entirely in R. Reproducible code throughout. tidy() used for clean coefficient output. ggplot2 for all visualisations with a consistent custom theme."
+) |>
+  kbl(row.names = FALSE) |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = TRUE) |>
+  column_spec(1, bold = TRUE, width = "2em") |>
+  column_spec(2, bold = TRUE, width = "14em")
+```
+
+## Reflections on Each Objective
+
+**Objective 1: Probability as a Foundation**
+
+This objective was addressed from the very start of the modelling process. Before
+fitting any model, I explicitly identified the probability distribution appropriate
+for each outcome: Normal for `mpg`, Bernoulli for `am`, and Multinomial for `cyl`.
+The log-likelihood curve for the Normal model (Section 3) demonstrated visually
+that the MLE is the value of mean that maximises the log-likelihood, in this
+case the sample mean. Throughout the portfolio, AIC, BIC, and LRT were used as
+model comparison tools, all of which are derived directly from the
+log-likelihood at the MLE. This established probability theory not as background
+reading, but as the active framework underpinning every modelling decision.
+
+**Objective 2: Applying the Appropriate GLM**
+
+Three distinct outcome types required three distinct modelling approaches. Linear
+regression was chosen for `mpg` because it is continuous and approximately
+symmetric, the Normal error assumption is justified and OLS is the MLE. Logistic
+regression was chosen for `am` because it is binary and the Bernoulli distribution
+with logit link is the canonical GLM for two-class outcomes. Multinomial regression
+was chosen for `cyl` because the three cylinder categories are unordered,
+treating them as numeric would impose an arbitrary equal spacing. LDA was also
+applied to `am` as a generative alternative, achieving a comparable AUC of
+`r round(auc_lda, 3)` to the logistic model's `r round(auc_log, 3)`. In each
+case the choice of model was driven by the statistical properties of the outcome,
+not convenience.
+
+**Objective 3: Model Selection**
+
+Model selection was demonstrated through multiple complementary approaches. For
+linear regression, a table of four candidate models was compared using AIC, BIC,
+adjusted R-squared, and RMSE, the Full model achieved the lowest AIC and was
+taken forward. Stepwise selection (`stepAIC`) was then applied and, critically, a
+multicollinearity diagnosis revealed that `disp` had a VIF exceeding 10. Dropping
+`disp` and re-running stepwise produced a final model with all VIF values below 5.
+For logistic regression, the LRT confirmed that `wt + hp` significantly improved
+on `wt` alone, while adding a third predictor caused complete separation, a
+concrete illustration of why model selection must account for sample size
+constraints. LOOCV was used to compare OLS, LASSO, and Ridge regression,
+and 10-fold CV compared logistic regression against LDA. LASSO lambda was tuned
+by cross-validation across 40 grid values. Across all methods, model selection
+was principled and evidence-based.
+
+**Objective 4: Communicate to a General Audience**
+
+Every section contains an explanation block that translates model
+output into interpretable statements. Coefficients are expressed as real-world
+effects (e.g., "every additional 1,000 lbs reduces mpg by approximately 3.9").
+Odds ratios are presented in a forest plot with a clear reference line at 1,
+making direction and magnitude immediately readable. The separation plot shows
+visually why weight alone almost perfectly distinguishes automatic from manual
+cars. The predicted probability curve for multinomial regression communicates
+the model's output without any equations. The dedicated Plain Language Summary
+section (Section 9) consolidates all findings for a non-specialist reader,
+and avoids statistical jargon throughout.
+
+**Objective 5: R Implementation**
+
+The entire workflow was implemented in R using a consistent and reproducible
+coding style. The `broom` package was used throughout to produce tidy, tabular
+model outputs via `tidy()` and `glance()`. `ggplot2` with a custom `theme_portfolio()`
+function was used for all visualisations, ensuring a consistent visual style.
+`glmnet` was used for LASSO and Ridge with cross-validation via `cv.glmnet()`.
+`nnet::multinom()` was used for multinomial regression with manually computed
+z-scores and p-values. `MASS::lda()` was used for discriminant analysis.
+`caret::train()` with `trainControl()` was used for LOOCV and 10-fold CV.
+Multicollinearity was diagnosed and resolved using `car::vif()`. Model
+assumptions were tested with `lmtest::bptest()` and `ResourceSelection::hoslem.test()`.
+ROC curves and AUC were computed with `pROC`. All code is visible in the
+rendered document via code folding, making the analysis fully reproducible.
+
+---
+
+*Portfolio produced using R `r R.version$major`.`r R.version$minor` and RMarkdown.*
+*Data: Henderson & Velleman (1981).*

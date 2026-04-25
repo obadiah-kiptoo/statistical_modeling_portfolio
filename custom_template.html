@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>$if(title)$$title$$endif$</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+<style>
+/* ════════════════════════════════════════════════════════
+   ENHANCED PROFESSIONAL THEME — with JS interactions
+   ════════════════════════════════════════════════════════ */
+
+:root {
+  --white:    #ffffff;
+  --off:      #f8f9fa;
+  --light:    #f1f3f5;
+  --border:   #dee2e6;
+  --border2:  #e9ecef;
+  --text:     #212529;
+  --muted:    #6c757d;
+  --accent:   #2563eb;
+  --accent2:  #059669;
+  --red:      #dc2626;
+  --amber:    #d97706;
+  --ink:      #111827;
+  --nav-h:    58px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--white) !important;
+  color: var(--text) !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-size: 16px !important;
+  line-height: 1.72 !important;
+  margin: 0 !important;
+  padding-top: var(--nav-h) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Reading progress bar ────────────────────── */
+#progress-bar {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  z-index: 9999;
+  transition: width 0.1s linear;
+}
+
+/* ── Fixed navigation bar ────────────────────── */
+#site-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--nav-h);
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2.5rem;
+  transition: box-shadow 0.2s;
+}
+#site-nav.scrolled {
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+}
+.nav-brand {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.nav-brand span {
+  color: var(--accent);
+}
+.nav-links {
+  display: flex;
+  gap: 0;
+  list-style: none;
+  margin: 0; padding: 0;
+}
+.nav-links a {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 0.82rem !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: var(--muted) !important;
+  text-decoration: none !important;
+  padding: 0 0.9rem;
+  height: var(--nav-h);
+  display: flex; align-items: center;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.nav-links a:hover,
+.nav-links a.active {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent);
+}
+.nav-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.3em 0.6em;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+/* ── Layout ──────────────────────────────────── */
+.container-fluid.main-container {
+  max-width: 1100px !important;
+  margin: 0 auto !important;
+  padding: 0 3rem 6rem !important;
+}
+
+/* ── Header ──────────────────────────────────── */
+#header {
+  padding: 3.5rem 0 2.5rem !important;
+  margin-bottom: 3rem !important;
+  border-bottom: 1px solid var(--border) !important;
+  position: relative;
+}
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.header-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(37,99,235,0.08);
+  border: 1px solid rgba(37,99,235,0.2);
+  padding: 0.25em 0.75em;
+  border-radius: 2px;
+}
+.title {
+  font-family: 'Playfair Display', Georgia, serif !important;
+  font-weight: 700 !important;
+  font-size: clamp(1.9rem, 4vw, 2.8rem) !important;
+  color: var(--ink) !important;
+  line-height: 1.12 !important;
+  letter-spacing: -0.01em !important;
+  margin: 0 0 0.5rem !important;
+}
+.subtitle {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 400 !important;
+  font-size: 1rem !important;
+  color: var(--muted) !important;
+  margin: 0 0 1rem !important;
+}
+.header-info {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.header-info-item {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.88rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.header-info-item::before {
+  content: '';
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+/* ── Sections ────────────────────────────────── */
+.section {
+  padding-top: calc(var(--nav-h) + 1rem);
+  margin-top: -var(--nav-h);
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Inter', sans-serif !important;
+  color: var(--ink) !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.01em !important;
+}
+h1 {
+  font-size: 1.7rem !important;
+  font-weight: 700 !important;
+  margin: 3.5rem 0 0.9rem !important;
+  padding-bottom: 0.6rem !important;
+  border-bottom: 2px solid var(--ink) !important;
+  scroll-margin-top: calc(var(--nav-h) + 1rem);
+}
+h2 {
+  font-size: 1.28rem !important;
+  font-weight: 600 !important;
+  margin: 2.2rem 0 0.7rem !important;
+  scroll-margin-top: calc(var(--nav-h) + 1rem);
+}
+h3 {
+  font-size: 1.08rem !important;
+  font-weight: 600 !important;
+  color: var(--accent) !important;
+  margin: 1.8rem 0 0.5rem !important;
+}
+h4 {
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  color: var(--muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  margin: 1.4rem 0 0.4rem !important;
+}
+.header-section-number {
+  color: var(--accent) !important;
+  font-weight: 400 !important;
+  margin-right: 0.4rem !important;
+  font-size: 0.9em !important;
+}
+
+/* ── Fade-in on scroll ───────────────────────── */
+.fade-section {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.fade-section.visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Text ────────────────────────────────────── */
+p { margin-bottom: 1.1rem; color: #374151; line-height: 1.75; }
+p:last-child { margin-bottom: 0; }
+strong { color: var(--ink); font-weight: 600; }
+em { font-style: italic; }
+a, a:link, a:visited, a:hover, a:active, a:focus {
+  color: var(--accent) !important;
+  text-decoration: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+a:hover { opacity: 0.78 !important; }
+hr { border: none !important; border-top: 1px solid var(--border) !important; margin: 2.5rem 0 !important; }
+ul, ol { color: #374151; padding-left: 1.4rem; margin-bottom: 1rem; }
+li { margin-bottom: 0.25rem; }
+
+/* ── Inline code ─────────────────────────────── */
+code {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 0.87em !important;
+  background: var(--light) !important;
+  color: var(--red) !important;
+  padding: 0.1em 0.38em !important;
+  border-radius: 3px !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* ── Code chunks ─────────────────────────────── */
+.sourceCode {
+  margin: 1.5rem 0 !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  border: 1px solid #2a2a3c !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+}
+div.sourceCode { background: #1e1e2e !important; margin: 0 !important; }
+div.sourceCode::before {
+  content: 'R';
+  display: block;
+  background: #16161d;
+  color: #7c7caa;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.32rem 1rem;
+  border-bottom: 1px solid #2a2a3c;
+}
+pre {
+  background: #1e1e2e !important;
+  color: #cdd6f4 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 0.95rem !important;
+  line-height: 1.7 !important;
+  padding: 1.1rem 1.3rem !important;
+  margin: 0 !important;
+  overflow-x: auto !important;
+}
+pre code {
+  background: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  border: none !important;
+  font-size: 1em !important;
+}
+pre *, code *, .sourceCode * {
+  text-decoration: none !important;
+  border-bottom: none !important;
+  border-top: none !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+pre a, pre a:hover, code a, code a:hover,
+.sourceCode a, .sourceCode a:hover,
+div.sourceCode a, div.sourceCode a:hover {
+  text-decoration: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+/* ── R output ────────────────────────────────── */
+pre:not(.sourceCode pre) {
+  background: var(--off) !important;
+  color: #374151 !important;
+  border: 1px solid var(--border) !important;
+  border-left: 3px solid var(--accent2) !important;
+  border-radius: 0 6px 6px 0 !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 0.9rem !important;
+  padding: 1rem 1.2rem !important;
+  margin: 0.3rem 0 1.5rem !important;
+}
+
+/* ── Figures ─────────────────────────────────── */
+img {
+  max-width: 100% !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  display: block !important;
+  margin: 1.5rem auto !important;
+  transition: box-shadow 0.2s, transform 0.2s;
+  cursor: zoom-in;
+}
+img:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
+  transform: scale(1.005);
+}
+.figure { margin: 2rem 0 !important; }
+p.caption, .caption {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 0.84rem !important;
+  color: var(--muted) !important;
+  text-align: center !important;
+  margin-top: 0.5rem !important;
+  font-style: italic !important;
+}
+
+/* ── Lightbox overlay ────────────────────────── */
+#lightbox {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88);
+  z-index: 9000;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+#lightbox.open { display: flex; }
+#lightbox img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 6px !important;
+  border: none !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  transform: none !important;
+  cursor: default;
+  margin: 0 !important;
+}
+#lightbox-close {
+  position: fixed; top: 1.2rem; right: 1.5rem;
+  color: white; font-size: 1.8rem; cursor: pointer;
+  opacity: 0.8; line-height: 1;
+  font-family: system-ui;
+}
+#lightbox-close:hover { opacity: 1; }
+
+/* ── Tables ──────────────────────────────────── */
+table {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.95rem !important;
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.5rem 0 !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+thead tr { background: var(--ink) !important; }
+thead th {
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: #fff !important;
+  padding: 0.75rem 1rem !important;
+  font-weight: 500 !important;
+  border: none !important;
+}
+tbody td {
+  padding: 0.6rem 1rem !important;
+  border-bottom: 1px solid var(--border2) !important;
+  color: #374151 !important;
+  vertical-align: middle !important;
+  transition: background 0.15s;
+}
+tbody tr:nth-child(even) td { background: var(--off) !important; }
+tbody tr:hover td { background: #eff6ff !important; }
+.table-success td { background: #f0fdf4 !important; color: #166534 !important; font-weight: 600 !important; }
+.table-warning td { background: #fffbeb !important; color: #92400e !important; }
+
+/* ── Blockquotes ─────────────────────────────── */
+blockquote {
+  border-left: 3px solid var(--accent) !important;
+  background: #eff6ff !important;
+  margin: 1.8rem 0 !important;
+  padding: 1rem 1.4rem !important;
+  border-radius: 0 6px 6px 0 !important;
+}
+blockquote p { color: #1e3a5f !important; margin: 0 !important; }
+blockquote strong { color: var(--accent) !important; }
+blockquote table { margin: 0.6rem 0 0 !important; border: none !important; }
+blockquote thead th { background: var(--accent) !important; }
+
+/* ── MathJax ─────────────────────────────────── */
+.MathJax { color: #1e40af !important; }
+.MathJax_Display {
+  background: var(--off) !important;
+  border: 1px solid var(--border) !important;
+  border-left: 3px solid var(--accent) !important;
+  padding: 1.2rem 1.5rem !important;
+  margin: 1.5rem 0 !important;
+  border-radius: 0 6px 6px 0 !important;
+  overflow-x: auto !important;
+  text-align: center !important;
+}
+
+/* ── Code folding button ─────────────────────── */
+.code-folding-btn, .btn-default {
+  background: var(--off) !important;
+  color: var(--muted) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 0.78rem !important;
+  padding: 0.22em 0.6em !important;
+  box-shadow: none !important;
+  transition: background 0.15s, color 0.15s;
+}
+.code-folding-btn:hover, .btn-default:hover {
+  background: var(--light) !important;
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+/* ── Back to top button ──────────────────────── */
+#back-to-top {
+  position: fixed;
+  bottom: 2rem; right: 2rem;
+  width: 42px; height: 42px;
+  background: var(--ink);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: translateY(12px);
+  transition: opacity 0.25s, transform 0.25s, background 0.2s;
+  z-index: 800;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+#back-to-top.visible { opacity: 1; transform: none; }
+#back-to-top:hover { background: var(--accent); }
+
+/* ── Search bar ──────────────────────────────── */
+#search-wrap {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 2000;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+}
+#search-wrap.open { display: flex; }
+#search-box {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  width: min(600px, 90vw);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.2);
+}
+#search-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.7rem 1rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  outline: none;
+  color: var(--ink);
+}
+#search-input:focus { border-color: var(--accent); }
+#search-results { margin-top: 0.8rem; max-height: 300px; overflow-y: auto; }
+.search-result-item {
+  padding: 0.65rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 0.7rem;
+}
+.search-result-item:hover { background: var(--off); }
+.search-result-section {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  min-width: 76px;
+}
+.search-result-text {
+  font-size: 1rem;
+  color: var(--ink);
+}
+.search-hint {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+  text-align: right;
+}
+
+/* ── Keyboard shortcut badge ─────────────────── */
+kbd {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  background: var(--light);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.1em 0.4em;
+  color: var(--muted);
+}
+
+/* ── Scrollbar ───────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--off); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── Print ───────────────────────────────────── */
+@media print {
+  #site-nav, #back-to-top, #progress-bar { display: none !important; }
+  body { padding-top: 0 !important; }
+  pre { font-size: 0.7rem; }
+}
+
+/* ── Responsive ──────────────────────────────── */
+@media (max-width: 768px) {
+  .nav-links { display: none; position: absolute; top: var(--nav-h); left: 0; right: 0;
+    background: white; flex-direction: column; border-bottom: 1px solid var(--border);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .nav-links.open { display: flex; }
+  .nav-links a { height: auto !important; padding: 0.8rem 2rem !important;
+    border-bottom: 1px solid var(--border2) !important; border-left: none !important; }
+  .nav-links a.active { border-left: 3px solid var(--accent) !important; }
+  .nav-toggle { display: block; }
+  .container-fluid.main-container { padding: 0 1.2rem 4rem !important; }
+  h1 { font-size: 1.3rem !important; }
+  pre { font-size: 0.82rem !important; }
+  table { font-size: 0.9rem !important; }
+  #back-to-top { bottom: 1.2rem; right: 1.2rem; }
+}
+</style>
+
+$for(css)$
+<link rel="stylesheet" href="$css$" />
+$endfor$
+
+</head>
+<body>
+
+<!-- Reading progress bar -->
+<div id="progress-bar"></div>
+
+<!-- Fixed navigation -->
+<nav id="site-nav">
+  <div class="nav-brand">Modeling<span>.</span>Portfolio</div>
+  <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu">☰</button>
+  <ul class="nav-links" id="nav-links">
+    <li><a href="#data">Dataset</a></li>
+    <li><a href="#eda">EDA</a></li>
+    <li><a href="#probability">Probability</a></li>
+    <li><a href="#linear">Linear</a></li>
+    <li><a href="#regularisation">Regularisation</a></li>
+    <li><a href="#logistic">Logistic</a></li>
+    <li><a href="#multinomial">Multinomial</a></li>
+    <li><a href="#lda">LDA</a></li>
+    <li><a href="#cv">CV</a></li>
+    <li><a href="#diagnostics">Diagnostics</a></li>
+    <li><a href="#" id="search-trigger" title="Search (Ctrl+K)">⌕</a></li>
+  </ul>
+</nav>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <span id="lightbox-close">✕</span>
+  <img id="lightbox-img" src="" alt="" />
+</div>
+
+<!-- Search overlay -->
+<div id="search-wrap">
+  <div id="search-box">
+    <input type="text" id="search-input" placeholder="Search sections, methods, topics…" autocomplete="off" />
+    <div id="search-results"></div>
+    <div class="search-hint">Press <kbd>Esc</kbd> to close · <kbd>Enter</kbd> to navigate</div>
+  </div>
+</div>
+
+<!-- Back to top -->
+<button id="back-to-top" title="Back to top">↑</button>
+
+<!-- Main content -->
+<div class="container-fluid main-container">
+
+<div id="header">
+  <div class="header-meta">
+    <span class="header-badge">Statistical Modelling Portfolio</span>
+  </div>
+  $if(title)$<h1 class="title toc-ignore">$title$</h1>$endif$
+  $if(subtitle)$<p class="subtitle">$subtitle$</p>$endif$
+  <div class="header-info">
+    $if(author)$<span class="header-info-item">$for(author)$$author$$sep$, $endfor$</span>$endif$
+    $if(date)$<span class="header-info-item">$date$</span>$endif$
+    <span class="header-info-item">mtcars · n = 32</span>
+    <span class="header-info-item">5 Objectives · 6 Methods</span>
+  </div>
+</div>
+
+$body$
+
+</div><!-- /main-container -->
+
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+$for(include-after)$
+$include-after$
+$endfor$
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── 1. Reading progress bar ─────────────────── */
+  const bar = document.getElementById('progress-bar');
+  function updateProgress() {
+    const scrollTop  = window.scrollY;
+    const docHeight  = document.documentElement.scrollHeight - window.innerHeight;
+    const pct        = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    bar.style.width  = pct + '%';
+  }
+
+  /* ── 2. Navbar scroll shadow + active link ───── */
+  const nav      = document.getElementById('site-nav');
+  const navLinks = document.querySelectorAll('#nav-links a:not(#search-trigger)');
+
+  function updateNav() {
+    nav.classList.toggle('scrolled', window.scrollY > 10);
+
+    // Active section highlighting
+    let current = '';
+    document.querySelectorAll('h1[id], div[id]').forEach(el => {
+      const top = el.getBoundingClientRect().top;
+      if (top <= 90) current = el.id;
+    });
+
+    navLinks.forEach(a => {
+      const href = a.getAttribute('href').replace('#', '');
+      a.classList.toggle('active', href === current);
+    });
+  }
+
+  /* ── 3. Back-to-top button ───────────────────── */
+  const btt = document.getElementById('back-to-top');
+  function updateBTT() {
+    btt.classList.toggle('visible', window.scrollY > 400);
+  }
+  btt.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  /* ── 4. Combined scroll handler ──────────────── */
+  window.addEventListener('scroll', () => {
+    updateProgress();
+    updateNav();
+    updateBTT();
+    revealSections();
+  }, { passive: true });
+
+  /* ── 5. Fade-in sections on scroll ──────────── */
+  function wrapSections() {
+    document.querySelectorAll(
+      '.main-container > div:not(#header), ' +
+      '.main-container > p, ' +
+      '.main-container > blockquote, ' +
+      '.main-container > table, ' +
+      '.main-container > .figure, ' +
+      'h1, h2'
+    ).forEach(el => {
+      if (!el.classList.contains('fade-section') && el.id !== 'header') {
+        el.classList.add('fade-section');
+      }
+    });
+  }
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.06, rootMargin: '0px 0px -40px 0px' });
+
+  function revealSections() {}  // handled by IntersectionObserver
+
+  function initFade() {
+    document.querySelectorAll('.fade-section').forEach(el => observer.observe(el));
+  }
+
+  /* ── 6. Mobile nav toggle ────────────────────── */
+  const toggle  = document.getElementById('nav-toggle');
+  const navList = document.getElementById('nav-links');
+  toggle.addEventListener('click', () => {
+    navList.classList.toggle('open');
+  });
+  // Close on link click
+  navLinks.forEach(a => {
+    a.addEventListener('click', () => navList.classList.remove('open'));
+  });
+  // Close on outside click
+  document.addEventListener('click', e => {
+    if (!nav.contains(e.target)) navList.classList.remove('open');
+  });
+
+  /* ── 7. Smooth scroll for nav links ─────────── */
+  navLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      // Skip the search trigger — it has its own handler
+      if (a.id === 'search-trigger') return;
+      const href = a.getAttribute('href');
+      if (href.startsWith('#') && href.length > 1) {
+        e.preventDefault();
+        const target = document.querySelector(href);
+        if (target) {
+          const offset = parseInt(getComputedStyle(document.documentElement)
+                          .getPropertyValue('--nav-h')) || 58;
+          window.scrollTo({
+            top: target.offsetTop - offset - 8,
+            behavior: 'smooth'
+          });
+        }
+      }
+    });
+  });
+
+  /* ── 8. Image lightbox ───────────────────────── */
+  const lightbox     = document.getElementById('lightbox');
+  const lightboxImg  = document.getElementById('lightbox-img');
+  const lightboxClose = document.getElementById('lightbox-close');
+
+  function openLightbox(src, alt) {
+    lightboxImg.src = src;
+    lightboxImg.alt = alt || '';
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    document.body.style.overflow = '';
+    lightboxImg.src = '';
+  }
+
+  lightbox.addEventListener('click', e => {
+    if (e.target === lightbox || e.target === lightboxClose) closeLightbox();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeLightbox();
+      closeSearch();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      openSearch();
+    }
+  });
+
+  function initLightbox() {
+    document.querySelectorAll('.figure img, img.plot').forEach(img => {
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', () => openLightbox(img.src, img.alt));
+    });
+  }
+
+  /* ── 9. Search ───────────────────────────────── */
+  const searchWrap   = document.getElementById('search-wrap');
+  const searchInput  = document.getElementById('search-input');
+  const searchRes    = document.getElementById('search-results');
+  const searchTrigger = document.getElementById('search-trigger');
+
+  // Build search index from headings
+  const searchIndex = [];
+  function buildIndex() {
+    document.querySelectorAll('h1[id], h2[id], h3[id]').forEach(h => {
+      searchIndex.push({
+        id:    h.id,
+        text:  h.textContent.replace(/^[\d.]+\s*/, '').trim(),
+        level: h.tagName,
+        el:    h
+      });
+    });
+  }
+
+  function openSearch() {
+    searchWrap.classList.add('open');
+    searchInput.value = '';
+    searchRes.innerHTML = '';
+    setTimeout(() => searchInput.focus(), 50);
+  }
+  function closeSearch() {
+    searchWrap.classList.remove('open');
+  }
+
+  // search trigger wired in DOMContentLoaded below
+  searchWrap.addEventListener('click', e => { if (e.target === searchWrap) closeSearch(); });
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    searchRes.innerHTML = '';
+    if (!q) return;
+
+    const matches = searchIndex.filter(item =>
+      item.text.toLowerCase().includes(q)
+    ).slice(0, 8);
+
+    if (!matches.length) {
+      searchRes.innerHTML = '<div style="padding:0.6rem 0.8rem;color:#6c757d;font-size:0.85rem;">No results found</div>';
+      return;
+    }
+
+    matches.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'search-result-item';
+      const tag = item.level === 'H1' ? 'Section' : item.level === 'H2' ? 'Subsection' : 'Topic';
+      div.innerHTML = '<span class="search-result-section">' + tag + '</span>' +
+                       '<span class="search-result-text">' + item.text + '</span>';
+      div.addEventListener('click', () => {
+        closeSearch();
+        const offset = parseInt(getComputedStyle(document.documentElement)
+                        .getPropertyValue('--nav-h')) || 58;
+        window.scrollTo({ top: item.el.offsetTop - offset - 8, behavior: 'smooth' });
+      });
+      searchRes.appendChild(div);
+    });
+  });
+
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeSearch();
+    if (e.key === 'Enter') {
+      const first = searchRes.querySelector('.search-result-item');
+      if (first) first.click();
+    }
+  });
+
+  /* ── 10. Code block copy buttons ─────────────── */
+  function addCopyButtons() {
+    document.querySelectorAll('div.sourceCode').forEach(block => {
+      if (block.querySelector('.copy-btn')) return;
+      const btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.textContent = 'Copy';
+      btn.style.cssText = `
+        position:absolute; top:6px; right:8px;
+        font-family:'IBM Plex Mono',monospace; font-size:0.72rem;
+        letter-spacing:0.08em; text-transform:uppercase;
+        background:rgba(255,255,255,0.08); color:#7c7caa;
+        border:1px solid rgba(255,255,255,0.12); border-radius:3px;
+        padding:0.2em 0.6em; cursor:pointer; transition:all 0.15s;
+      `;
+      btn.addEventListener('mouseenter', () => {
+        btn.style.background = 'rgba(255,255,255,0.16)';
+        btn.style.color = '#cdd6f4';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.background = 'rgba(255,255,255,0.08)';
+        btn.style.color = '#7c7caa';
+      });
+      btn.addEventListener('click', () => {
+        const code = block.querySelector('pre')?.textContent || '';
+        navigator.clipboard.writeText(code).then(() => {
+          btn.textContent = 'Copied!';
+          btn.style.color = '#86efac';
+          setTimeout(() => { btn.textContent = 'Copy'; btn.style.color = '#7c7caa'; }, 1800);
+        }).catch(() => {
+          btn.textContent = 'Error';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+        });
+      });
+      block.style.position = 'relative';
+      block.appendChild(btn);
+    });
+  }
+
+  /* ── 11. Table sort ──────────────────────────── */
+  function initTableSort() {
+    document.querySelectorAll('thead th').forEach((th, colIdx) => {
+      th.style.cursor = 'pointer';
+      th.title = 'Click to sort';
+      let asc = true;
+      th.addEventListener('click', () => {
+        const tbody = th.closest('table').querySelector('tbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.sort((a, b) => {
+          const aVal = a.cells[colIdx]?.textContent.trim() || '';
+          const bVal = b.cells[colIdx]?.textContent.trim() || '';
+          const aNum = parseFloat(aVal);
+          const bNum = parseFloat(bVal);
+          if (!isNaN(aNum) && !isNaN(bNum)) return asc ? aNum - bNum : bNum - aNum;
+          return asc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        });
+        rows.forEach(r => tbody.appendChild(r));
+        // Update sort indicator
+        th.closest('thead').querySelectorAll('th').forEach(t => {
+          var txt = t.textContent; if (txt.slice(-2) === ' \u2191' || txt.slice(-2) === ' \u2193') t.textContent = txt.slice(0, -2);
+        });
+        th.textContent += asc ? ' ↑' : ' ↓';
+        asc = !asc;
+      });
+    });
+  }
+
+  /* ── 12. Initialise everything on DOM ready ──── */
+  document.addEventListener('DOMContentLoaded', () => {
+    wrapSections();
+    initFade();
+    buildIndex();
+    initLightbox();
+    addCopyButtons();
+    initTableSort();
+    updateProgress();
+    updateNav();
+    updateBTT();
+
+    // Wire search trigger here so element is guaranteed to exist
+    var st = document.getElementById('search-trigger');
+    if (st) {
+      st.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();   // prevent document outside-click handler closing nav
+        navList.classList.remove('open');
+        openSearch();
+      });
+    }
+  });
+
+  // Re-run lightbox and copy buttons after RMarkdown JS finishes
+  window.addEventListener('load', () => {
+    initLightbox();
+    addCopyButtons();
+    initTableSort();
+    // Reveal already-visible sections
+    document.querySelectorAll('.fade-section').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight) el.classList.add('visible');
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>
