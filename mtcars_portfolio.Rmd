@@ -2,7 +2,7 @@
 title: "Statistical Modelling Portfolio"
 subtitle: "Motor Trend Car Road Tests — mtcars Dataset"
 author: "Statistical Modeling Portfolio"
-date: "`r format(Sys.Date(), '%B %d, %Y')`"
+date: "April, 16, 2026"
 output:
   html_document:
     template: custom_template.html
@@ -296,15 +296,15 @@ cor_mat %>%
 
 ## Probability Distributions in This Portfolio
 
-Every statistical model begins by specifying a **probability distribution** that
+Every statistical model begins by specifying a probability distribution that
 describes how the outcome was generated. The choice of distribution must match
 the nature of the outcome variable:
 
 | Outcome | Distribution | Rationale |
 |:--------|:-------------|:----------|
-| `mpg` — continuous | Normal: `Y_i ~ N(mu_i, sigma^2)` | Symmetric, continuous — OLS is both MLE and BLUE |
-| `am` — binary | Bernoulli: `Y_i ~ Bernoulli(p_i)` | Two mutually exclusive outcomes |
-| `cyl` — 3 categories | Multinomial(`p_i`) | Unordered polytomous outcome |
+| `mpg`  (continuous) | Normal: `Y_i ~ N(mu_i, sigma^2)` | Symmetric, continuous — OLS is both MLE and BLUE |
+| `am`  (binary) | Bernoulli: `Y_i ~ Bernoulli(p_i)` | Two mutually exclusive outcomes |
+| `cyl` 3 (categories) | Multinomial(`p_i`) | Unordered polytomous outcome |
 
 ## Maximum Likelihood Estimation (MLE)
 
@@ -317,16 +317,16 @@ the data. Taking the logarithm of this function gives the log‑likelihood, whic
 is easier to work with because products become sums. The MLE is the parameter
 value that maximizes this log‑likelihood.
 
-For **linear regression** under the Normal error assumption, the MLE coincides
+For `linear regression` under the Normal error assumption, the MLE coincides
 with the familiar Ordinary Least Squares (OLS) solution. In this case, the
 coefficient estimates have a closed‑form expression based on matrix algebra.
 
-For **logistic** and **multinomial** regression, there is no closed‑form
+For `logistic` and `multinomial` regression, there is no closed‑form
 solution. Instead, the estimates are found numerically using the iterative
 reweighted least squares (IRLS) algorithm, as implemented in functions such as
 `glm()` and `multinom()`.
 
-For **logistic** and **multinomial** regression, the solution is found numerically
+For `logistic` and `multinomial` regression, the solution is found numerically
 via the IRLS algorithm inside `glm()` and `multinom()`.
 
 
@@ -342,7 +342,7 @@ flexible models, while BIC applies a stronger penalty and tends to prefer more
 parsimonious ones. Both are computed from the log‑likelihood and the number of
 estimated parameters.
 
-The **Likelihood‑Ratio Test (LRT)** provides a formal hypothesis test for
+The `Likelihood‑Ratio Test (LRT)` provides a formal hypothesis test for
 comparing two nested models. It measures how much the log‑likelihood improves
 when moving from a smaller model to a larger one. The resulting test statistic
 follows a chi‑square distribution, with degrees of freedom equal to the
@@ -503,7 +503,7 @@ par(mfrow = c(1, 1))
 
 Multicollinearity occurs when predictors are highly correlated, inflating
 coefficient variance, widening confidence intervals, and making individual
-effects unreliable. The **Variance Inflation Factor (VIF)** quantifies this:
+effects unreliable. The `Variance Inflation Factor (VIF)` quantifies this:
 
 VIF<sub>j</sub> = 1 / (1 − R<sub>j</sub><sup>2</sup>)
 
@@ -572,15 +572,15 @@ vif_full |>
 Three complementary strategies are applied to resolve the collinearity between
 `disp`, `wt`, and `hp`:
 
-**Dropping the most redundant predictor.** `disp` has the highest VIF and is
+**Dropping the most redundant predictor:** `disp` has the highest VIF and is
 the most strongly correlated with both `wt` and `hp`. It is removed before
 stepwise selection.
 
-**Stepwise selection.** With `disp` excluded, `stepAIC()` selects among the
+**Stepwise selection:** With `disp` excluded, `stepAIC()` selects among the
 remaining predictors using AIC, further pruning any that do not contribute unique
 information.
 
-**Ridge regression.** Ridge shrinks collinear coefficients toward each other
+**Ridge regression:** Ridge shrinks collinear coefficients toward each other
 rather than to zero, directly mitigating the variance inflation caused by
 correlated predictors. Applied in the regularisation section.
 
@@ -675,12 +675,13 @@ tidy(lm_step, conf.int = TRUE) |>
 
 > **Explanation:** According to the above linear regression model:
 >
-> `wt`: An increase in weight by 1,000 leads to a decrease in miles by gallon by 3.9 miles keeping all other variables constant.
+> `wt`: An increase in weight by 1,000 pounds leads to a decrease in miles per gallon by 3.9 miles keeping all other variables constant.
 >
-> `qsec`: An increase in quarter mile time by 1 unit leads to an increase in miles by gallon by 1.2 miles, keeping all other variables constant.
+> `qsec`: An increase in quarter mile time by 1 unit leads to an increase in miles per gallon by 1.2 miles, keeping all other variables constant.
 >
 > `am`: A manual car achieves 2.936miles more than an automatic car.
->`Intercept`: For an automatic car keeping all other variables constant it achieves an average mpg of 9.618
+>
+>`Intercept`: For an automatic car keeping all other variables constant it achieves an average miles per gallon of 9.618miles.
 
 ## Prediction interval
 ```{r}
@@ -692,9 +693,6 @@ new_point <- tibble(
 )
 
 predict(lm_step, newdata = new_point, interval = "prediction")
-
-
-
 ```
 >**Explanation:** We are 95% confident that for a manual car with a weight of 3,000 pounds, quarter mile time of 17.0, the predicted miles per gallon is between 16.34 miles and 26.9 miles.
 
@@ -849,7 +847,7 @@ data.frame(
 ## Why Logistic Regression?
 
 `am` is binary, so the Normal distribution is inappropriate. The Bernoulli
-distribution is the natural choice, with the **logit** as the canonical link:
+distribution is the natural choice, with the `logit` as the canonical link:
 
 | Component   | Logistic Regression |
 |:----------- |:--------------------|
@@ -880,7 +878,7 @@ log_core  <- glm(am ~ wt + hp, data = cars, family = binomial())
 
 log_overfit <- glm(am ~ wt + hp + qsec, data = cars, family = binomial())
 
-cat("Deviance check \n")
+#Deviance check
 cat("Core  (2 predictors):", round(deviance(log_core),    2), "\n")
 cat("Overfit (3 predictors):", round(deviance(log_overfit), 2),
     "<-- near zero = complete separation\n")
@@ -901,10 +899,8 @@ map_dfr(list(Null = log_null, `wt only` = log_wt,
   row_spec(4, bold = TRUE, background = "#f0fdf4", color = "#166534")
 ```
 
-```{r log-lrt}
-cat("=== LRT: Null vs wt only ===\n")
+```{r log-lrt,echo=TRUE}
 print(anova(log_null, log_wt, test = "Chisq"))
-cat("\n=== LRT: wt only vs wt + hp (Core) ===\n")
 print(anova(log_wt, log_core, test = "Chisq"))
 cat("\nConclusion: wt + hp significantly improves on wt alone.",
     "\nAdding a 3rd predictor causes complete separation — Core model selected.\n")
@@ -1018,7 +1014,7 @@ ggroc(roc_log, colour = col_blue, linewidth = 1.4) +
        x = "1 - Specificity (FPR)", y = "Sensitivity (TPR)") +
   theme_portfolio()
 ```
-
+## Confusion Matrix and Model Accuracy
 ```{r log-confmat}
 pred_class <- ifelse(fitted(log_final) > 0.5, "Manual", "Automatic")
 conf_log   <- table(Predicted = pred_class, Actual = cars$am)
@@ -1029,13 +1025,13 @@ cat("\nAccuracy:", round(log_acc * 100, 1), "% | AUC:", round(auc_log, 3))
 
 > **Explanation:** The model correctly classifies
 > **`r round(log_acc * 100, 1)`%** of cars as automatic or manual. Weight is
-> the strongest predictor — heavier cars are much more likely to have automatic
+> the strongest predictor, heavier cars are much more likely to have automatic
 > transmission. Each additional 1,000 lbs reduces the odds of manual transmission
 > by approximately
 > **`r round((1 - tidy(log_final, exponentiate=TRUE)$estimate[2]) * 100, 0)`%**,
 > holding horsepower constant. A three-predictor model was deliberately avoided:
 > with only 19 manual cars, adding a third predictor causes complete separation
-> and produces an unreliable, overfit model.
+> and produces an unreliable, overfitting model.
 
 ---
 
@@ -1127,6 +1123,7 @@ bind_cols(wt_grid, as.data.frame(probs)) |>
   theme_portfolio()
 ```
 
+## Confusion Matrix and Model Accuracy
 ```{r multi-confmat}
 multi_pred <- predict(multi_model, cars)
 conf_multi  <- table(Predicted = multi_pred, Actual = cars$cyl)
@@ -1240,7 +1237,7 @@ par(mfrow = c(1, 1))
 ## Why Cross-Validation?
 
 With only n = 32 observations, a single train/test split is unreliable.
-**Leave-One-Out Cross-Validation (LOOCV)** avoids this by repeatedly training
+`Leave-One-Out Cross-Validation (LOOCV)` avoids this by repeatedly training
 the model on 31 cars and predicting the one left out:
 
 ```{r cv-setup}
